@@ -1,0 +1,5 @@
+1. conda activate tensorflow_gpuenv
+2. nvidia-smi
+   export CUDA_VISIBLE_DEVICES=0,1
+   import tensorflow as tf
+    sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
