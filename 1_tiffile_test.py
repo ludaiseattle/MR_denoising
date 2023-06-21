@@ -6,6 +6,7 @@ def fourier_transform(img_addr):
     image = tiff.imread(img_addr)
     # Perform Fourier transform
     fft_image = np.fft.fft2(image)
+    print(fft_image)
 
     # Save as TIFF using tifffile
     tiff.imwrite('1_tifffile_test.tif', np.abs(fft_image))

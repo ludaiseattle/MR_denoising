@@ -13,12 +13,12 @@ def samp(infile, out1, out2):
     image1 = np.zeros((height, width), dtype=np.uint8)
     image2 = np.zeros((height, width), dtype=np.uint8)
 
-    for y in range(height):
-        for x in range(width):
-            if (x + y) % 2 == 0:
-                image1[y, x] = mri_image[y, x]
+    for x in range(width):
+        for y in range(height):
+            if x % 2 == 0:
+                image1[x, y] = mri_image[x, y]
             else:
-                image2[y, x] = mri_image[y, x]
+                image2[x, y] = mri_image[x, y]
 
     cv2.imwrite(out1, image1)
     cv2.imwrite(out2, image2)
