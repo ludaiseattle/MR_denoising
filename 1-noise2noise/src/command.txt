@@ -1,0 +1,5 @@
+python train.py --train-dir /home/alyld7/data/1-whole_out/samp1 --train-size 821 --valid-dir /home/alyld7/data/1-whole_out/samp2 --valid-size 821 --ckpt-save-path /home/alyld7/data/1-whole_out/checkpoint --ckpt-overwrite --report-interval 205 --nb-epochs 2 --batch-size 4 --loss l2 --noise-type gaussian --noise-param 50 --crop-size 64 --plot-stats > output.log &
+
+
+#pip uninstall openexr
+#conda install -c conda-forge openexr-python
