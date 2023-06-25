@@ -19,8 +19,10 @@ def samp(fft):
     for x in range(width):
         for y in range(height):
             if x % 2 == 0 or is_central(cthred, x, y, width, height):
+            #if x % 2 == 0:
                 image1[x, y] = fft[x, y]
             if x % 2 == 1 or is_central(cthred, x, y, width, height):
+            #if x % 2 == 1:
                 image2[x, y] = fft[x, y]
 
     return image1, image2

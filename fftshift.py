@@ -2,6 +2,7 @@ import numpy as np
 from numpy import fft
 import tifffile as tiff
 from scipy import fftpack
+from utils import normalize_amplitude_spectrum, save_as_tif
 
 def print_info(img, shifted_fft):
     print("--------------------")
@@ -39,21 +40,17 @@ def fftshift(img_addr):
     #img = img.astype(float)
 
     fft_tif = fft.fft2(img)
-    shifted_fft = fft.fftshift(fft_tif)
 
-    #amplitude_spectrum = np.abs(shifted_fft)
-    #phase_spectrum = np.angle(shifted_fft)
+    #for test
+    #amplitude_spectrum = normalize_amplitude_spectrum(fft_tif)
+    #save_as_tif("./fft_amplitude.tif", amplitude_spectrum)
+
+    shifted_fft = fft.fftshift(fft_tif)
 
     #print_info(img, shifted_fft)
 
     return shifted_fft
 
-def normalize_amplitude_spectrum(amplitude_spectrum):
-    log_amplitude = 20 * np.log10(1 + amplitude_spectrum)
-    normalized_amplitude = (log_amplitude - np.min(log_amplitude)) / (np.max(log_amplitude) - np.min(log_amplitude))
-    normalized_amplitude_scaled = normalized_amplitude * 255
-    ret = normalized_amplitude_scaled.astype(np.uint8)
-    return ret 
 
 def get_amplitude_spectrum(img_addr, out_addr):
     shifted_fft = fftshift(img_addr)
@@ -69,7 +66,7 @@ def get_amplitude_spectrum(img_addr, out_addr):
     print(amplitude_spectrum.max())
     print(amplitude_spectrum.min())
 
-    tiff.imwrite(out_addr, amplitude_spectrum)
+    save_as_tif(out_addr, amplitude_spectrum)
 
 def get_phase_spectrum(img_addr, out_addr):
     img = tiff.imread(img_addr)

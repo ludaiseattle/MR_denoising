@@ -5,6 +5,7 @@ import os
 from fftshift import fftshift, ifftshift
 from undersampling import samp 
 from reconstruction import reconstruct
+from utils import save_amplitude
 
 def print_info(shifted_fft):
     print("--------------------")
@@ -15,12 +16,12 @@ def print_info(shifted_fft):
     print("fft max value: ", shifted_fft.max())
     print("--------------------")
 
-def get_outname(file, output_folder):
+def get_outname(file, output_folder, suffix):
     out_file = os.path.basename(file)
     out_file, extension = os.path.splitext(out_file)
     out_file = os.path.join(output_folder, out_file)
-    out1 = out_file + "_samp1.tif"
-    out2 = out_file + "_samp2.tif"
+    out1 = out_file + "_" + suffix + "1.tif"
+    out2 = out_file + "_" + suffix + "2.tif"
     return out1, out2
 
 def whole_flow(input_folder, output_folder):
@@ -28,9 +29,19 @@ def whole_flow(input_folder, output_folder):
     for file in file_paths:
         fft = fftshift(file)
         samp1, samp2 = samp(fft)
+        #for test
+        us1, us2 = get_outname(file, output_folder, "undersamp")
+        save_amplitude(us1, samp1)
+        save_amplitude(us2, samp2)
+        ###
         recons1 = reconstruct(samp1, fft, 2)
         recons2 = reconstruct(samp2, fft, 2)
-        out1, out2 = get_outname(file, output_folder)
+        #for test
+        cons1, cons2 = get_outname(file, output_folder, "reconstruct")
+        save_amplitude(cons1, recons1)
+        save_amplitude(cons2, recons2)
+        ###
+        out1, out2 = get_outname(file, output_folder, "sample")
         ifft1 = ifftshift(recons1)
         ifft2 = ifftshift(recons2)
         tiff.imwrite(out1, ifft1)
