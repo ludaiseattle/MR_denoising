@@ -4,7 +4,6 @@ import tifffile as tiff
 import os
 from fftshift import fftshift, ifftshift
 from undersampling import samp 
-from reconstruction import reconstruct
 from utils import save_amplitude
 
 def print_info(shifted_fft):
@@ -34,16 +33,9 @@ def whole_flow(input_folder, output_folder):
         save_amplitude(us1, samp1)
         save_amplitude(us2, samp2)
         ###
-        recons1 = reconstruct(samp1, fft, 2)
-        recons2 = reconstruct(samp2, fft, 2)
-        #for test
-        cons1, cons2 = get_outname(file, output_folder, "reconstruct")
-        save_amplitude(cons1, recons1)
-        save_amplitude(cons2, recons2)
-        ###
         out1, out2 = get_outname(file, output_folder, "sample")
-        ifft1 = ifftshift(recons1)
-        ifft2 = ifftshift(recons2)
+        ifft1 = ifftshift(samp1)
+        ifft2 = ifftshift(samp2)
         tiff.imwrite(out1, ifft1)
         tiff.imwrite(out2, ifft2)
 
