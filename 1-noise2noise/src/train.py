@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import torch
+import os
 import torch.nn as nn
 
 from datasets import load_dataset
@@ -16,8 +17,10 @@ def parse_args():
     parser = ArgumentParser(description='PyTorch implementation of Noise2Noise from Lehtinen et al. (2018)')
 
     # Data parameters
-    parser.add_argument('-t', '--train-dir', help='training set path', default='./../data/train')
-    parser.add_argument('-v', '--valid-dir', help='test set path', default='./../data/valid')
+    parser.add_argument('-t', '--train-dir', help='training set path', default='/home/alyld7/data/1-whole_out/samp1')
+    parser.add_argument('-tt', '--train-target-dir', help='training target set path', default='/home/alyld7/data/1-whole_out/samp2')
+    parser.add_argument('-v', '--valid-dir', help='test set path', default='/home/alyld7/data/1-whole_out/valid1')
+    parser.add_argument('-vt', '--valid-target-dir', help='test target set path', default='/home/alyld7/data/1-whole_out/valid2')
     parser.add_argument('--ckpt-save-path', help='checkpoint save path', default='./../ckpts')
     parser.add_argument('--ckpt-overwrite', help='overwrite model checkpoint on save', action='store_true')
     parser.add_argument('--report-interval', help='batch report interval', default=500, type=int)
@@ -43,6 +46,13 @@ def parse_args():
 
     return parser.parse_args()
 
+def get_files_in_folder(folder_path):
+    file_list = []
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            file_list.append(file_path)
+    return file_list
 
 if __name__ == '__main__':
     """Trains Noise2Noise."""
@@ -50,10 +60,9 @@ if __name__ == '__main__':
     # Parse training parameters
     params = parse_args()
 
-    # Train/valid datasets
-    train_loader = load_dataset(params.train_dir, params.train_size, params, shuffled=True)
-    valid_loader = load_dataset(params.valid_dir, params.valid_size, params, shuffled=False)
+    train_list = get_files_in_folder(params.train_dir)
+    valid_list = get_files_in_folder(params.valid_dir)
 
     # Initialize model and train
     n2n = Noise2Noise(params, trainable=True)
-    n2n.train(train_loader, valid_loader)
+    n2n.train(train_list, params.train_target_dir, valid_list, params.valid_target_dir)

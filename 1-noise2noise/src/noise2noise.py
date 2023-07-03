@@ -3,6 +3,8 @@
 
 import torch
 import torch.nn as nn
+import torchvision.transforms.functional as tvF
+from PIL import Image
 from torch.optim import Adam, lr_scheduler
 
 from unet import UNet
@@ -34,7 +36,7 @@ class Noise2Noise(object):
             self.model = UNet(in_channels=9)
         else:
             self.is_mc = False
-            self.model = UNet(in_channels=3)
+            self.model = UNet(in_channels=1)
 
         # Set optimizer and loss, if in training mode
         if self.trainable:
@@ -121,13 +123,13 @@ class Noise2Noise(object):
             self.model.load_state_dict(torch.load(ckpt_fname, map_location='cpu'))
 
 
-    def _on_epoch_end(self, stats, train_loss, epoch, epoch_start, valid_loader):
+    def _on_epoch_end(self, stats, train_loss, epoch, epoch_start, valid_list, valid_target_dir):
         """Tracks and saves starts after each epoch."""
 
         # Evaluate model on validation set
         print('\rTesting model on validation set... ', end='')
         epoch_time = time_elapsed_since(epoch_start)[0]
-        valid_loss, valid_time, valid_psnr = self.eval(valid_loader)
+        valid_loss, valid_time, valid_psnr = self.eval(valid_list, valid_target_dir)
         show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr)
 
         # Decrease learning rate if plateau
@@ -188,7 +190,7 @@ class Noise2Noise(object):
             create_montage(img_name, self.p.noise_type, save_path, source_imgs[i], denoised_imgs[i], clean_imgs[i], show)
 
 
-    def eval(self, valid_loader):
+    def eval(self, valid_list, valid_target_dir):
         """Evaluates denoiser on validation set."""
 
         self.model.train(False)
@@ -197,7 +199,18 @@ class Noise2Noise(object):
         loss_meter = AvgMeter()
         psnr_meter = AvgMeter()
 
-        for batch_idx, (source, target) in enumerate(valid_loader):
+        for batch_idx, source_file in enumerate(valid_list):
+            print(source_file)
+            target_file = os.path.basename(source_file)
+            target_file = target_file.split("1.tif")[0]
+            target_file = target_file + "2.tif"
+            target_file = os.path.join(valid_target_dir, target_file)
+
+            target = Image.open(target_file).convert("L")
+            target = tvF.to_tensor(target)
+
+            source = Image.open(source_file).convert("L")
+            source = tvF.to_tensor(source)
             if self.use_cuda:
                 source = source.cuda()
                 target = target.cuda()
@@ -212,11 +225,10 @@ class Noise2Noise(object):
             # Compute PSRN
             if self.is_mc:
                 source_denoised = reinhard_tonemap(source_denoised)
-            # TODO: Find a way to offload to GPU, and deal with uneven batch sizes
-            for i in range(self.p.batch_size):
-                source_denoised = source_denoised.cpu()
-                target = target.cpu()
-                psnr_meter.update(psnr(source_denoised[i], target[i]).item())
+            source_denoised = source_denoised.cpu()
+            target = target.cpu()
+            print("source_denoised, target", len(source_denoised), len(target))
+            psnr_meter.update(psnr(source_denoised[0], target[0]).item())
 
         valid_loss = loss_meter.avg
         valid_time = time_elapsed_since(valid_start)[0]
@@ -225,13 +237,13 @@ class Noise2Noise(object):
         return valid_loss, valid_time, psnr_avg
 
 
-    def train(self, train_loader, valid_loader):
+    def train(self, train_list, train_target_dir, valid_list, valid_target_dir):
         """Trains denoiser on training set."""
 
         self.model.train(True)
 
         self._print_params()
-        num_batches = len(train_loader)
+        num_batches = len(train_list)
         print(num_batches, self.p.report_interval)
         assert num_batches % self.p.report_interval == 0, 'Report interval must divide total number of batches, {num_batches}, {self.p.report_interval}'
 
@@ -254,7 +266,20 @@ class Noise2Noise(object):
             time_meter = AvgMeter()
 
             # Minibatch SGD
-            for batch_idx, (source, target) in enumerate(train_loader):
+            #for batch_idx, (source, target) in enumerate(train_loader):
+            #/home/alyld7/data/1-whole_out/samp1/new_MidbrainvolumePamirNott090-9_org_samp1.tif
+            for batch_idx, source_file in enumerate(train_list):
+                print(source_file)
+                target_file = os.path.basename(source_file)
+                target_file = target_file.split("1.tif")[0]
+                target_file = target_file + "2.tif"
+                target_file = os.path.join(train_target_dir, target_file)
+
+                target = Image.open(target_file).convert("L")
+                target = tvF.to_tensor(target)
+
+                source = Image.open(source_file).convert("L")
+                source = tvF.to_tensor(source)
                 batch_start = datetime.now()
                 progress_bar(batch_idx, num_batches, self.p.report_interval, loss_meter.val)
 
@@ -282,7 +307,7 @@ class Noise2Noise(object):
                     time_meter.reset()
 
             # Epoch end, save and reset tracker
-            self._on_epoch_end(stats, train_loss_meter.avg, epoch, epoch_start, valid_loader)
+            self._on_epoch_end(stats, train_loss_meter.avg, epoch, epoch_start, valid_list, valid_target_dir)
             train_loss_meter.reset()
 
         train_elapsed = time_elapsed_since(train_start)[0]

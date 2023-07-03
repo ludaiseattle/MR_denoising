@@ -8,7 +8,7 @@ import torch.nn as nn
 class UNet(nn.Module):
     """Custom U-Net architecture for Noise2Noise (see Appendix, Table 2)."""
 
-    def __init__(self, in_channels=3, out_channels=3):
+    def __init__(self, in_channels=1, out_channels=1):
         """Initializes U-Net."""
 
         super(UNet, self).__init__()
@@ -78,23 +78,32 @@ class UNet(nn.Module):
         """Through encoder, then decoder by adding U-skip connections. """
 
         # Encoder
+        print("")
+        print("x", x.shape)
         pool1 = self._block1(x)
+        print("pool1", pool1.shape)
         pool2 = self._block2(pool1)
+        print("pool2", pool2.shape)
         pool3 = self._block2(pool2)
+        print("pool3", pool3.shape)
         pool4 = self._block2(pool3)
+        print("pool4", pool4.shape)
         pool5 = self._block2(pool4)
+        print("pool5", pool5.shape)
 
         # Decoder
         upsample5 = self._block3(pool5)
-        concat5 = torch.cat((upsample5, pool4), dim=1)
+        print("upsample5", upsample5.shape)
+        concat5 = torch.cat((upsample5, pool4), dim=0)
+        print("concat5", concat5.shape)
         upsample4 = self._block4(concat5)
-        concat4 = torch.cat((upsample4, pool3), dim=1)
+        concat4 = torch.cat((upsample4, pool3), dim=0)
         upsample3 = self._block5(concat4)
-        concat3 = torch.cat((upsample3, pool2), dim=1)
+        concat3 = torch.cat((upsample3, pool2), dim=0)
         upsample2 = self._block5(concat3)
-        concat2 = torch.cat((upsample2, pool1), dim=1)
+        concat2 = torch.cat((upsample2, pool1), dim=0)
         upsample1 = self._block5(concat2)
-        concat1 = torch.cat((upsample1, x), dim=1)
+        concat1 = torch.cat((upsample1, x), dim=0)
 
         # Final activation
         return self._block6(concat1)
