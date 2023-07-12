@@ -47,11 +47,11 @@ def time_elapsed_since(start):
     return string, ms
 
 
-def show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr):
+def show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp):
     """Formats validation error stats."""
 
     clear_line()
-    print('Train time: {} | Valid time: {} | Valid loss: {:>1.5f} | Avg PSNR: {:.2f} dB'.format(epoch_time, valid_time, valid_loss, valid_psnr))
+    print('Train time: {} | Valid time: {} | Valid loss: {:>1.5f} | Avg PSNR: {:.2f} dB | Avg sharpness: {:.2f}'.format(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp))
 
 
 def show_on_report(batch_idx, num_batches, loss, elapsed):

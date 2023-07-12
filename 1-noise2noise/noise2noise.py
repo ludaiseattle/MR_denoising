@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import torch
+import cv2
 import torch.nn as nn
 import torchvision.transforms.functional as tvF
 from PIL import Image
 from torch.optim import Adam, lr_scheduler
+import tifffile as tiff
 
 from unet import UNet
 from utils import *
@@ -123,14 +125,24 @@ class Noise2Noise(object):
             self.model.load_state_dict(torch.load(ckpt_fname, map_location='cpu'))
 
 
+    def compute_sharpness(self, image):
+        #gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        laplacian = cv2.Laplacian(image, cv2.CV_64F)
+
+        mag = np.mean(np.abs(laplacian))
+
+        return mag
+
+
     def _on_epoch_end(self, stats, train_loss, epoch, epoch_start, valid_list, valid_target_dir):
         """Tracks and saves starts after each epoch."""
 
         # Evaluate model on validation set
         print('\rTesting model on validation set... ', end='')
         epoch_time = time_elapsed_since(epoch_start)[0]
-        valid_loss, valid_time, valid_psnr = self.eval(valid_list, valid_target_dir)
-        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr)
+        valid_loss, valid_time, valid_psnr, valid_sharp = self.eval(valid_list, valid_target_dir)
+        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp)
 
         # Decrease learning rate if plateau
         self.scheduler.step(valid_loss)
@@ -139,13 +151,16 @@ class Noise2Noise(object):
         stats['train_loss'].append(train_loss)
         stats['valid_loss'].append(valid_loss)
         stats['valid_psnr'].append(valid_psnr)
+        stats['valid_sharpness'].append(valid_sharp)
         self.save_model(epoch, stats, epoch == 0)
+
 
         # Plot stats
         if self.p.plot_stats:
             loss_str = f'{self.p.loss.upper()} loss'
             plot_per_epoch(self.ckpt_dir, 'Valid loss', stats['valid_loss'], loss_str)
             plot_per_epoch(self.ckpt_dir, 'Valid PSNR', stats['valid_psnr'], 'PSNR (dB)')
+            plot_per_epoch(self.ckpt_dir, 'Valid sharpness', stats['valid_sharpness'], '')
 
 
     def test(self, test_loader, show):
@@ -190,6 +205,18 @@ class Noise2Noise(object):
             create_montage(img_name, self.p.noise_type, save_path, source_imgs[i], denoised_imgs[i], clean_imgs[i], show)
 
 
+    def merge_images(self, image1, image2, a):
+        assert image1.size == image2.size, "size not equal!"
+
+        image1 = image1.astype(np.float32)
+        image2 = image2.astype(np.float32)
+
+        merged_image = a * image1 + (1 - a) * image2
+        merged_image = np.clip(merged_image, 0, 255)
+        merged_image = merged_image.astype(np.uint8)
+
+        return merged_image
+
     def eval(self, valid_list, valid_target_dir):
         """Evaluates denoiser on validation set."""
 
@@ -198,19 +225,19 @@ class Noise2Noise(object):
         valid_start = datetime.now()
         loss_meter = AvgMeter()
         psnr_meter = AvgMeter()
+        sharp_meter = AvgMeter()
 
         for batch_idx, source_file in enumerate(valid_list):
             print(source_file)
-            target_file = os.path.basename(source_file)
-            target_file = target_file.split("1.tif")[0]
-            target_file = target_file + "2.tif"
-            target_file = os.path.join(valid_target_dir, target_file)
-
-            target = Image.open(target_file).convert("L")
-            target = tvF.to_tensor(target)
+            file_name = os.path.basename(source_file)
+            file_prefix = file_name.split(".tif")[0]
 
             source = Image.open(source_file).convert("L")
+            print("source", source.size)
             source = tvF.to_tensor(source)
+            print("source", source.shape)
+            target = source
+
             if self.use_cuda:
                 source = source.cuda()
                 target = target.cuda()
@@ -227,14 +254,31 @@ class Noise2Noise(object):
                 source_denoised = reinhard_tonemap(source_denoised)
             source_denoised = source_denoised.cpu()
             target = target.cpu()
-            print("source_denoised, target", len(source_denoised), len(target))
+            print("source_denoised, target", len(source_denoised), len(target), target.shape)
             psnr_meter.update(psnr(source_denoised[0], target[0]).item())
+                
+
+            source_denoised = np.array(tvF.to_pil_image(source_denoised))
+            target = np.array(tvF.to_pil_image(target))
+            #merged
+            merged_image = self.merge_images(target, source_denoised, 0.3)
+
+            #save image
+            tiff.imwrite(os.path.join(self.p.ckpt_save_path, file_prefix + "_denoised.tif"), source_denoised)
+            tiff.imwrite(os.path.join(self.p.ckpt_save_path, file_prefix + "_merged.tif"), merged_image)
+
+            #update sharpness
+            merged_sharp = self.compute_sharpness(merged_image)
+            target_sharp = self.compute_sharpness(target)
+            sharp_diff = merged_sharp - target_sharp
+            sharp_meter.update(sharp_diff)
 
         valid_loss = loss_meter.avg
         valid_time = time_elapsed_since(valid_start)[0]
         psnr_avg = psnr_meter.avg
+        sharp_avg = sharp_meter.avg
 
-        return valid_loss, valid_time, psnr_avg
+        return valid_loss, valid_time, psnr_avg, sharp_avg
 
 
     def train(self, train_list, train_target_dir, valid_list, valid_target_dir):
@@ -252,6 +296,7 @@ class Noise2Noise(object):
                  'noise_param': self.p.noise_param,
                  'train_loss': [],
                  'valid_loss': [],
+                 'valid_sharpness': [],
                  'valid_psnr': []}
 
         # Main training loop

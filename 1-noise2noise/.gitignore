@@ -1,3 +1,6 @@
 data/
 ckpts/
 src/__pycache__/
+*.tif
+*.pyc
+*.log

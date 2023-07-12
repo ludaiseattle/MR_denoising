@@ -1,6 +1,0 @@
-python train.py --train-dir /home/alyld7/data/1-whole_out/recons_data/samp1 --train-target-dir /home/alyld7/data/1-whole_out/recons_data/samp2 --train-size 700 --valid-dir /home/alyld7/data/1-whole_out/recons_data/valid1 --valid-target-dir /home/alyld7/data/1-whole_out/recons_data/valid2 --valid-size 120 --ckpt-save-path /home/alyld7/data/1-whole_out/recons_data/checkpoint --ckpt-overwrite --report-interval 70 --nb-epochs 2 --batch-size 4 --loss l2 --noise-type gaussian --noise-param 50 --crop-size 64 --plot-stats > output.log &
-
-nohup python train.py --train-dir /home/alyld7/data/1-whole_out/1-largeCentreHerizontalBinary/samp1 --train-target-dir /home/alyld7/data/1-whole_out/1-largeCentreHerizontalBinary/samp2 --train-size 700 --valid-dir /home/alyld7/data/1-whole_out/1-largeCentreHerizontalBinary/valid1 --valid-target-dir /home/alyld7/data/1-whole_out/1-largeCentreHerizontalBinary/valid2 --valid-size 120 --ckpt-save-path /home/alyld7/data/1-whole_out/1-largeCentreHerizontalBinary/checkpoint --ckpt-overwrite --report-interval 70 --nb-epochs 2 --batch-size 4 --loss l2 --noise-type gaussian --noise-param 50 --crop-size 64 --plot-stats > output.log &
-
-#pip uninstall openexr
-#conda install -c conda-forge openexr-python

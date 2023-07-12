@@ -8,67 +8,6 @@ def is_central(cthred, x, y, width, height):
     else:
         return False
 
-def samp(fft):
-    height, width = fft.shape[:2]
-
-    image1 = np.zeros((height, width), dtype=np.complex128)
-    image2 = np.zeros((height, width), dtype=np.complex128)
-
-    cthred = (width//2)*(1/10)
-
-    for x in range(width):
-        for y in range(height):
-            if x % 2 == 0 or is_central(cthred, x, y, width, height):
-            #if x % 2 == 0:
-                image1[x, y] = fft[x, y]
-            if x % 2 == 1 or is_central(cthred, x, y, width, height):
-            #if x % 2 == 1:
-                image2[x, y] = fft[x, y]
-
-    return image1, image2
-
-def no_centre_horiz_samp(fft):
-    height, width = fft.shape[:2]
-
-    image1 = np.zeros((height, width), dtype=np.complex128)
-    image2 = np.zeros((height, width), dtype=np.complex128)
-
-    for x in range(width):
-        for y in range(height):
-            if x % 2 == 0:
-                image1[x, y] = fft[x, y]
-            if x % 2 == 1:
-                image2[x, y] = fft[x, y]
-
-    return image1, image2
-
-def no_centre_horiz_samp_four(fft):
-    height, width = fft.shape[:2]
-    cthred = (width//2)*(1/2)
-
-    image1 = np.zeros((height, width), dtype=np.complex128)
-    image2 = np.zeros((height, width), dtype=np.complex128)
-    image3 = np.zeros((height, width), dtype=np.complex128)
-    image4 = np.zeros((height, width), dtype=np.complex128)
-
-    for x in range(width):
-        for y in range(height):
-            #if x % 4 == 0 or is_central(cthred, x, y, width, height):
-            if x % 4 == 0:
-                image1[x, y] = fft[x, y]
-            #if x % 4 == 1 or is_central(cthred, x, y, width, height):
-            if x % 4 == 1:
-                image2[x, y] = fft[x, y]
-            #if x % 4 == 2 or is_central(cthred, x, y, width, height):
-            if x % 4 == 2:
-                image3[x, y] = fft[x, y]
-            #if x % 4 == 3 or is_central(cthred, x, y, width, height):
-            if x % 4 == 3:
-                image4[x, y] = fft[x, y]
-
-    return image1, image2, image3, image4
-
-
 #Bresenham
 def star_sampling(image):
     center = (image.shape[1] // 2, image.shape[0] // 2)
@@ -80,6 +19,7 @@ def star_sampling(image):
     angle_step = 1 
     image1 = np.zeros((height, width), dtype=np.complex128)
     image2 = np.zeros((height, width), dtype=np.complex128)
+    cthred = (width//2)*(1/2)
 
     for angle in range(0, 360, angle_step):
         radian = np.radians(angle)
@@ -108,13 +48,22 @@ def star_sampling(image):
             x_coord = np.clip(x_coord, 0, width - 1)
             y_coord = np.clip(y_coord, 0, height - 1)
 
-            if angle % 8 == 0:
-                image1[x_coord, y_coord] = image[x_coord, y_coord]
-            elif angle % 8 == 4:
-                image2[x_coord, y_coord] = image[x_coord, y_coord]
+            if is_central(cthred, x, y, width, height):
+                if angle % 16 == 0:
+                    image1[x_coord, y_coord] = image[x_coord, y_coord]
+                elif angle % 16 == 4:
+                    image2[x_coord, y_coord] = image[x_coord, y_coord]
+                else:
+                    image1[x_coord, y_coord] = image[x_coord, y_coord]
+                    image2[x_coord, y_coord] = image[x_coord, y_coord]
             else:
-                image1[x_coord, y_coord] = image[x_coord, y_coord]
-                image2[x_coord, y_coord] = image[x_coord, y_coord]
+                if angle % 8 == 0:
+                    image1[x_coord, y_coord] = image[x_coord, y_coord]
+                elif angle % 8 == 4:
+                    image2[x_coord, y_coord] = image[x_coord, y_coord]
+                else:
+                    image1[x_coord, y_coord] = image[x_coord, y_coord]
+                    image2[x_coord, y_coord] = image[x_coord, y_coord]
 
             error -= deltay
             if error < 0:
