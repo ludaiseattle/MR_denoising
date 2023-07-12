@@ -228,14 +228,14 @@ class Noise2Noise(object):
         sharp_meter = AvgMeter()
 
         for batch_idx, source_file in enumerate(valid_list):
-            print(source_file)
+            #print(source_file)
             file_name = os.path.basename(source_file)
             file_prefix = file_name.split(".tif")[0]
 
             source = Image.open(source_file).convert("L")
-            print("source", source.size)
+            #print("source", source.size)
             source = tvF.to_tensor(source)
-            print("source", source.shape)
+            #print("source", source.shape)
             target = source
 
             if self.use_cuda:
@@ -254,7 +254,7 @@ class Noise2Noise(object):
                 source_denoised = reinhard_tonemap(source_denoised)
             source_denoised = source_denoised.cpu()
             target = target.cpu()
-            print("source_denoised, target", len(source_denoised), len(target), target.shape)
+            #print("source_denoised, target", len(source_denoised), len(target), target.shape)
             psnr_meter.update(psnr(source_denoised[0], target[0]).item())
                 
 
