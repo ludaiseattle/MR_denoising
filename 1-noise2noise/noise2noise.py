@@ -216,6 +216,11 @@ class Noise2Noise(object):
         merged_image = merged_image.astype(np.uint8)
 
         return merged_image
+    
+    def add_gaussian_noise(self, image, mean=0, std_dev=10):
+        noise = np.random.normal(mean, std_dev, image.shape).astype(np.uint8)
+        noisy_image = cv2.add(image, noise)
+        return noisy_image
 
     def eval(self, valid_list, valid_target_dir):
         """Evaluates denoiser on validation set."""
@@ -227,6 +232,8 @@ class Noise2Noise(object):
         psnr_meter = AvgMeter()
         sharp_meter = AvgMeter()
 
+        base = None
+
         for batch_idx, source_file in enumerate(valid_list):
             #print(source_file)
             file_name = os.path.basename(source_file)
@@ -234,6 +241,15 @@ class Noise2Noise(object):
 
             source = Image.open(source_file).convert("L")
             #print("source", source.size)
+            if self.p.add_noise:
+                base = tvF.to_tensor(source)
+                source = np.asarray(source) 
+                #noise = np.random.poisson(source)
+                #noise_img = source + noise
+                #source = 255 * (noise_img / np.amax(noise_img))
+                source = self.add_gaussian_noise(source, 0, 0.5)
+                source = Image.fromarray(source)
+                
             source = tvF.to_tensor(source)
             #print("source", source.shape)
             target = source
@@ -249,23 +265,33 @@ class Noise2Noise(object):
             loss = self.loss(source_denoised, target)
             loss_meter.update(loss.item())
 
-            # Compute PSRN
+            # old Compute PSRN
             if self.is_mc:
                 source_denoised = reinhard_tonemap(source_denoised)
             source_denoised = source_denoised.cpu()
             target = target.cpu()
             #print("source_denoised, target", len(source_denoised), len(target), target.shape)
-            psnr_meter.update(psnr(source_denoised[0], target[0]).item())
+            #psnr_meter.update(psnr(source_denoised[0], target[0]).item())
+            #psnr
+            if self.p.add_noise:
+                psnr_meter.update(psnr(source_denoised, base).item() - psnr(target, base).item())
+            else:
+                psnr_meter.update(-1)
+            
                 
 
             source_denoised = np.array(tvF.to_pil_image(source_denoised))
             target = np.array(tvF.to_pil_image(target))
             #merged
             merged_image = self.merge_images(target, source_denoised, 0.3)
+            
 
             #save image
             tiff.imwrite(os.path.join(self.p.ckpt_save_path, file_prefix + "_denoised.tif"), source_denoised)
             tiff.imwrite(os.path.join(self.p.ckpt_save_path, file_prefix + "_merged.tif"), merged_image)
+            if self.p.add_noise:
+                source_np = np.array(tvF.to_pil_image(source))
+                tiff.imwrite(os.path.join(self.p.ckpt_save_path, file_prefix + "_noise.tif"), source_np)
 
             #update sharpness
             merged_sharp = self.compute_sharpness(merged_image)
