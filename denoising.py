@@ -3,7 +3,7 @@ import glob
 import tifffile as tiff
 import os
 from fftshift import fftshift, ifftshift
-from downsampling import star_sampling, horiz_samp_four
+from downsampling import star_sampling, horiz_samp_four, spiral_sampling
 from utils import save_amplitude
 
 def print_info(shifted_fft):
@@ -28,7 +28,8 @@ def whole_flow(input_folder, output_folder):
     for file in file_paths:
         fft = fftshift(file)
         #samp1, samp2 = star_sampling(fft, 16, 32)
-        samp1, samp3, samp2, samp4 = horiz_samp_four(fft, 0.1)
+        #samp1, samp3, samp2, samp4 = horiz_samp_four(fft, 0.1)
+        samp1, samp2 = spiral_sampling(fft)
         
         #for test
         us1, us2 = get_outname(file, output_folder, "downsamp")

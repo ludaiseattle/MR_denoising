@@ -27,22 +27,35 @@ def samp(fft):
 
     return image1, image2
 
-def spiral_sampling(image, num_points, clockwise=True):
+def spiral_sampling(image, clockwise=True):
     height, width = image.shape[:2]
     center_x, center_y = width // 2, height // 2
+    num_points = width//4
+    image1 = np.zeros((height, width), dtype=np.complex128)
+    image2 = np.zeros((height, width), dtype=np.complex128)
+    max_dist = np.sqrt(center_x ** 2 + center_y ** 2)
+    angle_step = 1
 
-    angles = np.linspace(0, 2 * np.pi, num_points, endpoint=False)
-    distances = np.linspace(0, min(width, height) / 2, num_points)
+    for angle in range(0, 360, angle_step):
+        radian = np.radians(angle)
+        angles = np.linspace(angle, 2 * np.pi + angle, num_points, endpoint=False)
+        distances = np.linspace(0, max_dist, num_points)
 
-    if not clockwise:
-        angles = np.flipud(angles)
-    x = center_x + distances * np.cos(angles)
-    y = center_y + distances * np.sin(angles)
-    sampling_points = np.column_stack((x, y))
+        if not clockwise:
+            angles = np.flipud(angles)
+        x = center_x + distances * np.cos(angles)
+        y = center_y + distances * np.sin(angles)
+        for p in np.column_stack((x, y)):
+            x = int(p[0])
+            y = int(p[1])
+            x = np.clip(x, 0, width - 1)
+            y = np.clip(y, 0, height - 1)
+            if angle % 2 == 0:
+                image1[x, y] = image[x, y]
+            if angle % 2 == 1:
+                image2[x, y] = image[x, y]
 
-    sampled_values = [image[int(p[1]), int(p[0])] for p in sampling_points]
-
-    return sampled_values
+    return image1, image2
 
 def horiz_samp_four(fft, centra_size):
     height, width = fft.shape[:2]
