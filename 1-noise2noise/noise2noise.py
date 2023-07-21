@@ -283,7 +283,7 @@ class Noise2Noise(object):
             source_denoised = np.array(tvF.to_pil_image(source_denoised))
             target = np.array(tvF.to_pil_image(target))
             #merged
-            merged_image = self.merge_images(target, source_denoised, 0.3)
+            merged_image = self.merge_images(target, source_denoised, 0.08)
             
 
             #save image

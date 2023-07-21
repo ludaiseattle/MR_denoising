@@ -84,7 +84,7 @@ def horiz_samp_four(fft, centra_size):
     return image1, image2, image3, image4
 
 #Bresenham
-def star_sampling(image, central_freq, samp_freq):
+def star_sampling(image, central_freq, samp_freq, centre_size):
     center = (image.shape[1] // 2, image.shape[0] // 2)
     #distance = min(image.shape[:2]) // 2
     distance = np.sqrt(center[0]**2 + center[1]**2)
@@ -94,10 +94,18 @@ def star_sampling(image, central_freq, samp_freq):
     angle_step = 1 
     image1 = np.zeros((height, width), dtype=np.complex128)
     image2 = np.zeros((height, width), dtype=np.complex128)
-    cthred = (width//2)*(1/2)
+    cthred = (width//2)*centre_size
 
-    for angle in range(0, 360, angle_step):
-        radian = np.radians(angle)
+    """
+    for x in range(width):
+        for y in range(height):
+            if is_central(cthred, x, y, width, height):
+                image1[x, y] = image[x, y]
+                image2[x, y] = image[x, y]
+    """
+
+    for angle in range(0, 36000, angle_step):
+        radian = np.radians(angle/100)
 
         dx = int(distance * np.cos(radian))
         dy = int(distance * np.sin(radian))
