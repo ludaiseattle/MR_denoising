@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import torch
 
 def is_central(cthred, x, y, width, height):
     if ((x > width//2 - cthred and x < width//2 + cthred) 
@@ -85,6 +86,8 @@ def horiz_samp_four(fft, centra_size):
 
 #Bresenham
 def star_sampling(image, central_freq, samp_freq, centre_size):
+    image = torch.tensor(image, dtype=torch.complex128) 
+    image = image.cuda()
     center = (image.shape[1] // 2, image.shape[0] // 2)
     #distance = min(image.shape[:2]) // 2
     distance = np.sqrt(center[0]**2 + center[1]**2)
@@ -92,8 +95,8 @@ def star_sampling(image, central_freq, samp_freq, centre_size):
     height, width = image.shape[:2]
     sampling_points = []
     angle_step = 1 
-    image1 = np.zeros((height, width), dtype=np.complex128)
-    image2 = np.zeros((height, width), dtype=np.complex128)
+    image1 = torch.zeros((height, width), dtype=torch.complex128).cuda() 
+    image2 = torch.zeros((height, width), dtype=torch.complex128).cuda()
     cthred = (width//2)*centre_size
 
     """
@@ -153,5 +156,7 @@ def star_sampling(image, central_freq, samp_freq, centre_size):
                 y += ystep
                 error += deltax
 
+    image1 = image1.cpu().numpy()
+    image2 = image2.cpu().numpy()
     #print(image1, image2)
     return image1, image2

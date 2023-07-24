@@ -9,7 +9,7 @@ from PIL import Image
 from torch.optim import Adam, lr_scheduler
 import tifffile as tiff
 
-from unet import UNet
+from unet import UNet2 as UNet
 from utils import *
 
 import os
@@ -141,8 +141,8 @@ class Noise2Noise(object):
         # Evaluate model on validation set
         print('\rTesting model on validation set... ', end='')
         epoch_time = time_elapsed_since(epoch_start)[0]
-        valid_loss, valid_time, valid_psnr, valid_sharp = self.eval(valid_list, valid_target_dir)
-        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp)
+        valid_loss, valid_time, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_target = self.eval(valid_list, valid_target_dir)
+        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_target)
 
         # Decrease learning rate if plateau
         self.scheduler.step(valid_loss)
@@ -152,6 +152,9 @@ class Noise2Noise(object):
         stats['valid_loss'].append(valid_loss)
         stats['valid_psnr'].append(valid_psnr)
         stats['valid_sharpness'].append(valid_sharp)
+        stats['valid_sharp_perc'].append(valid_perc)
+        stats['valid_sharp_merged'].append(valid_merged)
+        stats['valid_sharp_target'].append(valid_target)
         self.save_model(epoch, stats, epoch == 0)
 
 
@@ -160,7 +163,10 @@ class Noise2Noise(object):
             loss_str = f'{self.p.loss.upper()} loss'
             plot_per_epoch(self.ckpt_dir, 'Valid loss', stats['valid_loss'], loss_str)
             plot_per_epoch(self.ckpt_dir, 'Valid PSNR', stats['valid_psnr'], 'PSNR (dB)')
-            plot_per_epoch(self.ckpt_dir, 'Valid sharpness', stats['valid_sharpness'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid sharpness difference', stats['valid_sharpness'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid sharpness (merged)', stats['valid_sharp_merged'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid sharpness (target)', stats['valid_sharp_target'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid sharpness diff (percentage)', stats['valid_sharp_perc'], '')
 
 
     def test(self, test_loader, show):
@@ -231,6 +237,9 @@ class Noise2Noise(object):
         loss_meter = AvgMeter()
         psnr_meter = AvgMeter()
         sharp_meter = AvgMeter()
+        sharp_perc = AvgMeter()
+        sharp_merged = AvgMeter()
+        sharp_target = AvgMeter()
 
         base = None
 
@@ -283,7 +292,7 @@ class Noise2Noise(object):
             source_denoised = np.array(tvF.to_pil_image(source_denoised))
             target = np.array(tvF.to_pil_image(target))
             #merged
-            merged_image = self.merge_images(target, source_denoised, 0.08)
+            merged_image = self.merge_images(target, source_denoised, 0.05)
             
 
             #save image
@@ -297,14 +306,21 @@ class Noise2Noise(object):
             merged_sharp = self.compute_sharpness(merged_image)
             target_sharp = self.compute_sharpness(target)
             sharp_diff = merged_sharp - target_sharp
+            sharp_percentage = sharp_diff / target_sharp
             sharp_meter.update(sharp_diff)
+            sharp_perc.update(sharp_percentage)
+            sharp_merged.update(merged_sharp)
+            sharp_target.update(target_sharp)
 
         valid_loss = loss_meter.avg
         valid_time = time_elapsed_since(valid_start)[0]
         psnr_avg = psnr_meter.avg
         sharp_avg = sharp_meter.avg
+        sharp_perc_avg = sharp_perc.avg
+        sharp_merged_avg = sharp_merged.avg
+        sharp_target_avg = sharp_target.avg
 
-        return valid_loss, valid_time, psnr_avg, sharp_avg
+        return valid_loss, valid_time, psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_target_avg
 
 
     def train(self, train_list, train_target_dir, valid_list, valid_target_dir):
@@ -323,6 +339,9 @@ class Noise2Noise(object):
                  'train_loss': [],
                  'valid_loss': [],
                  'valid_sharpness': [],
+                 'valid_sharp_perc': [],
+                 'valid_sharp_merged': [],
+                 'valid_sharp_target': [],
                  'valid_psnr': []}
 
         # Main training loop
