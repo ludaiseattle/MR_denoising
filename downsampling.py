@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import torch
+import random
 
 def is_central(cthred, x, y, width, height):
     if ((x > width//2 - cthred and x < width//2 + cthred) 
@@ -85,7 +86,17 @@ def horiz_samp_four(fft, centra_size):
     return image1, image2, image3, image4
 
 #Bresenham
-def star_sampling(image, central_freq, samp_freq, centre_size):
+def star_sampling(image, samp_freq, freq1, freq2):
+    def cond1(angle, hit=freq1):
+        if angle % samp_freq == hit:
+            return True
+        return False
+
+    def cond2(angle, hit=freq2):
+        if angle % samp_freq == hit:
+            return True
+        return False
+
     image = torch.tensor(image, dtype=torch.complex128) 
     image = image.cuda()
     center = (image.shape[1] // 2, image.shape[0] // 2)
@@ -97,18 +108,16 @@ def star_sampling(image, central_freq, samp_freq, centre_size):
     angle_step = 1 
     image1 = torch.zeros((height, width), dtype=torch.complex128).cuda() 
     image2 = torch.zeros((height, width), dtype=torch.complex128).cuda()
-    cthred = (width//2)*centre_size
+    #image1 = np.zeros((height, width), dtype=np.complex128) 
+    #image2 = np.zeros((height, width), dtype=np.complex128)
 
-    """
-    for x in range(width):
-        for y in range(height):
-            if is_central(cthred, x, y, width, height):
-                image1[x, y] = image[x, y]
-                image2[x, y] = image[x, y]
-    """
+    for angle in range(0, 360, angle_step):
+        if not cond1(angle) and not cond2(angle):
+            continue
+        
+        if angle % 
 
-    for angle in range(0, 36000, angle_step):
-        radian = np.radians(angle/100)
+        radian = np.radians(angle)
 
         dx = int(distance * np.cos(radian))
         dy = int(distance * np.sin(radian))
@@ -134,22 +143,15 @@ def star_sampling(image, central_freq, samp_freq, centre_size):
             x_coord = np.clip(x_coord, 0, width - 1)
             y_coord = np.clip(y_coord, 0, height - 1)
 
-            if is_central(cthred, x, y, width, height):
-                if angle % central_freq == 0:
-                    image1[x_coord, y_coord] = image[x_coord, y_coord]
-                elif angle % central_freq == (central_freq//2 - 1):
-                    image2[x_coord, y_coord] = image[x_coord, y_coord]
-                else:
-                    image1[x_coord, y_coord] = image[x_coord, y_coord]
-                    image2[x_coord, y_coord] = image[x_coord, y_coord]
-            else:
-                if angle % samp_freq == 0:
-                    image1[x_coord, y_coord] = image[x_coord, y_coord]
-                elif angle % samp_freq == (samp_freq//2 - 1):
-                    image2[x_coord, y_coord] = image[x_coord, y_coord]
-                else:
-                    image1[x_coord, y_coord] = image[x_coord, y_coord]
-                    image2[x_coord, y_coord] = image[x_coord, y_coord]
+            #random_numbers = random.sample(range(0, samp_freq), 2)
+            if cond1(angle):
+                image1[x_coord, y_coord] = image[x_coord, y_coord]
+            #elif cond2(angle):
+            if cond2(angle):
+                image2[x_coord, y_coord] = image[x_coord, y_coord]
+            #else:
+                #image1[x_coord, y_coord] = image[x_coord, y_coord]
+                #image2[x_coord, y_coord] = image[x_coord, y_coord]
 
             error -= deltay
             if error < 0:
