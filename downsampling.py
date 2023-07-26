@@ -44,7 +44,7 @@ def star_sampling(image, samp_freq, freq1, freq2):
         return points + [(2*x0-x, 2*y0-y) for x, y in points[-2::-1]]
 
     for angle in range(0, 180, angle_step):
-        if angle % samp_freq == 0:
+        if angle % (samp_freq * 4) == 0:
             random_numbers = random.sample(range(0, samp_freq), 2)
         if not cond1(angle, random_numbers[0]) and not cond2(angle, random_numbers[1]):
             continue
