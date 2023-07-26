@@ -46,8 +46,8 @@ def star_sampling(image, samp_freq, freq1, freq2):
     for angle in range(0, 180, angle_step):
         if angle % samp_freq == 0:
             random_numbers = random.sample(range(0, samp_freq), 2)
-        #if not cond1(angle, random_numbers[0]) and not cond2(angle, random_numbers[1]):
-        #    continue
+        if not cond1(angle, random_numbers[0]) and not cond2(angle, random_numbers[1]):
+            continue
 
         radian = np.radians(angle)
 
@@ -64,11 +64,12 @@ def star_sampling(image, samp_freq, freq1, freq2):
 
             if cond1(angle, random_numbers[0]):
                 image1[x_coord, y_coord] = image[x_coord, y_coord]
-            elif cond2(angle, random_numbers[1]):
+            #elif cond2(angle, random_numbers[1]):
+            if cond2(angle, random_numbers[1]):
                 image2[x_coord, y_coord] = image[x_coord, y_coord]
-            else:
-                image1[x_coord, y_coord] = image[x_coord, y_coord]
-                image2[x_coord, y_coord] = image[x_coord, y_coord]
+            #else:
+            #    image1[x_coord, y_coord] = image[x_coord, y_coord]
+            #    image2[x_coord, y_coord] = image[x_coord, y_coord]
 
     image1 = image1.cpu().numpy()
     image2 = image2.cpu().numpy()
