@@ -4,7 +4,7 @@ import glob
 import tifffile as tiff
 import os
 from fftshift import fftshift, ifftshift
-from downsampling import star_sampling, horiz_samp_four, spiral_sampling
+from downsampling import star_sampling
 from utils import save_amplitude
 
 def print_info(shifted_fft):
