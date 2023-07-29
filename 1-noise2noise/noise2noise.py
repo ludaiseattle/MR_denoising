@@ -94,7 +94,7 @@ class Noise2Noise(object):
                 else:
                     ckpt_dir_name = self.p.noise_type
 
-            self.ckpt_dir = os.path.join(self.p.ckpt_save_path, ckpt_dir_name)
+            self.ckpt_dir = os.path.join(self.p.ckpt_save_path, "stats")
             if not os.path.isdir(self.p.ckpt_save_path):
                 os.mkdir(self.p.ckpt_save_path)
             if not os.path.isdir(self.ckpt_dir):
@@ -141,8 +141,8 @@ class Noise2Noise(object):
         # Evaluate model on validation set
         print('\rTesting model on validation set... ', end='')
         epoch_time = time_elapsed_since(epoch_start)[0]
-        valid_loss, valid_time, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_target = self.eval(valid_list, valid_target_dir)
-        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_target)
+        valid_loss, valid_time, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target = self.eval(valid_list, valid_target_dir)
+        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target)
 
         # Decrease learning rate if plateau
         self.scheduler.step(valid_loss)
@@ -154,6 +154,7 @@ class Noise2Noise(object):
         stats['valid_sharpness'].append(valid_sharp)
         stats['valid_sharp_perc'].append(valid_perc)
         stats['valid_sharp_merged'].append(valid_merged)
+        stats['valid_sharp_denoised'].append(valid_denoised)
         stats['valid_sharp_target'].append(valid_target)
         self.save_model(epoch, stats, epoch == 0)
 
@@ -165,6 +166,7 @@ class Noise2Noise(object):
             plot_per_epoch(self.ckpt_dir, 'Valid PSNR', stats['valid_psnr'], 'PSNR (dB)')
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness difference', stats['valid_sharpness'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness (merged)', stats['valid_sharp_merged'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid sharpness (denoised)', stats['valid_sharp_denoised'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness (target)', stats['valid_sharp_target'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness diff (percentage)', stats['valid_sharp_perc'], '')
 
@@ -239,6 +241,7 @@ class Noise2Noise(object):
         sharp_meter = AvgMeter()
         sharp_perc = AvgMeter()
         sharp_merged = AvgMeter()
+        sharp_denoised = AvgMeter()
         sharp_target = AvgMeter()
 
         base = None
@@ -286,23 +289,26 @@ class Noise2Noise(object):
                 psnr_meter.update(psnr(source_denoised, base).item() - psnr(target, base).item())
             else:
                 psnr_meter.update(-1)
-            
-                
 
             source_denoised = np.array(tvF.to_pil_image(source_denoised))
             target = np.array(tvF.to_pil_image(target))
             #merged
             merged_image = self.merge_images(target, source_denoised, 0.05)
-            
 
             #save image
-            tiff.imwrite(os.path.join(self.p.ckpt_save_path, file_prefix + "_denoised.tif"), source_denoised)
-            tiff.imwrite(os.path.join(self.p.ckpt_save_path, file_prefix + "_merged.tif"), merged_image)
+            tif_path = os.path.join(self.p.ckpt_save_path, "tif")
+            if not os.path.isdir(self.p.ckpt_save_path):
+                os.mkdir(self.p.ckpt_save_path)
+            if not os.path.isdir(tif_path):
+                os.mkdir(tif_path)
+            tiff.imwrite(os.path.join(tif_path, file_prefix + "_denoised.tif"), source_denoised)
+            tiff.imwrite(os.path.join(tif_path, file_prefix + "_merged.tif"), merged_image)
             if self.p.add_noise:
                 source_np = np.array(tvF.to_pil_image(source))
-                tiff.imwrite(os.path.join(self.p.ckpt_save_path, file_prefix + "_noise.tif"), source_np)
+                tiff.imwrite(os.path.join(tif_path, file_prefix + "_noise.tif"), source_np)
 
             #update sharpness
+            denoised_sharp = self.compute_sharpness(source_denoised) 
             merged_sharp = self.compute_sharpness(merged_image)
             target_sharp = self.compute_sharpness(target)
             sharp_diff = merged_sharp - target_sharp
@@ -310,6 +316,7 @@ class Noise2Noise(object):
             sharp_meter.update(sharp_diff)
             sharp_perc.update(sharp_percentage)
             sharp_merged.update(merged_sharp)
+            sharp_denoised.update(denoised_sharp)
             sharp_target.update(target_sharp)
 
         valid_loss = loss_meter.avg
@@ -318,9 +325,10 @@ class Noise2Noise(object):
         sharp_avg = sharp_meter.avg
         sharp_perc_avg = sharp_perc.avg
         sharp_merged_avg = sharp_merged.avg
+        sharp_denoised_avg = sharp_denoised.avg
         sharp_target_avg = sharp_target.avg
 
-        return valid_loss, valid_time, psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_target_avg
+        return valid_loss, valid_time, psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_denoised_avg, sharp_target_avg
 
 
     def train(self, train_list, train_target_dir, valid_list, valid_target_dir):
@@ -341,6 +349,7 @@ class Noise2Noise(object):
                  'valid_sharpness': [],
                  'valid_sharp_perc': [],
                  'valid_sharp_merged': [],
+                 'valid_sharp_denoised': [],
                  'valid_sharp_target': [],
                  'valid_psnr': []}
 
