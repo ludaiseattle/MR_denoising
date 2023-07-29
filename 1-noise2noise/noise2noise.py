@@ -141,7 +141,7 @@ class Noise2Noise(object):
         # Evaluate model on validation set
         print('\rTesting model on validation set... ', end='')
         epoch_time = time_elapsed_since(epoch_start)[0]
-        valid_loss, valid_time, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target = self.eval(valid_list, valid_target_dir)
+        valid_loss, valid_time, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target = self.eval(epoch, valid_list, valid_target_dir)
         show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target)
 
         # Decrease learning rate if plateau
@@ -230,7 +230,7 @@ class Noise2Noise(object):
         noisy_image = cv2.add(image, noise)
         return noisy_image
 
-    def eval(self, valid_list, valid_target_dir):
+    def eval(self, epoch, valid_list, valid_target_dir):
         """Evaluates denoiser on validation set."""
 
         self.model.train(False)
@@ -247,6 +247,7 @@ class Noise2Noise(object):
         base = None
 
         for batch_idx, source_file in enumerate(valid_list):
+            print("batch_idx:", batch_idx)
             #print(source_file)
             file_name = os.path.basename(source_file)
             file_prefix = file_name.split(".tif")[0]
@@ -301,11 +302,12 @@ class Noise2Noise(object):
                 os.mkdir(self.p.ckpt_save_path)
             if not os.path.isdir(tif_path):
                 os.mkdir(tif_path)
-            tiff.imwrite(os.path.join(tif_path, file_prefix + "_denoised.tif"), source_denoised)
-            tiff.imwrite(os.path.join(tif_path, file_prefix + "_merged.tif"), merged_image)
-            if self.p.add_noise:
+            if batch_idx == 0:
+                tiff.imwrite(os.path.join(tif_path, file_prefix + "_epoch" + str(epoch) + "_denoised.tif"), source_denoised)
+                tiff.imwrite(os.path.join(tif_path, file_prefix + "_epoch" + str(epoch) + "_merged.tif"), merged_image)
+            if self.p.add_noise and batch_idx == 0:
                 source_np = np.array(tvF.to_pil_image(source))
-                tiff.imwrite(os.path.join(tif_path, file_prefix + "_noise.tif"), source_np)
+                tiff.imwrite(os.path.join(tif_path, file_prefix + "_epoch" + str(epoch) + "_noise.tif"), source_np)
 
             #update sharpness
             denoised_sharp = self.compute_sharpness(source_denoised) 

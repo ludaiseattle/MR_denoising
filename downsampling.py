@@ -43,13 +43,13 @@ def star_sampling(image, samp_freq, freq1, freq2):
             points.append((x, y))
         return points + [(2*x0-x, 2*y0-y) for x, y in points[-2::-1]]
 
-    for angle in range(0, 18000, angle_step):
+    for angle in range(0, 1800, angle_step):
         #if angle % (samp_freq * 4) == 0:
         #    random_numbers = random.sample(range(0, samp_freq), 2)
         if not cond1(angle) and not cond2(angle):
             continue
 
-        radian = np.radians(angle/100)
+        radian = np.radians(angle/10)
 
         dx = int(distance * np.cos(radian))
         dy = int(distance * np.sin(radian))
