@@ -141,8 +141,8 @@ class Noise2Noise(object):
         # Evaluate model on validation set
         print('\rTesting model on validation set... ', end='')
         epoch_time = time_elapsed_since(epoch_start)[0]
-        valid_loss, valid_time, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target = self.eval(epoch, valid_list, valid_target_dir)
-        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target)
+        valid_loss, valid_time, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_diff_avg = self.eval(epoch, valid_list, valid_target_dir)
+        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_diff_avg)
 
         # Decrease learning rate if plateau
         self.scheduler.step(valid_loss)
@@ -156,6 +156,10 @@ class Noise2Noise(object):
         stats['valid_sharp_merged'].append(valid_merged)
         stats['valid_sharp_denoised'].append(valid_denoised)
         stats['valid_sharp_target'].append(valid_target)
+        stats['valid_contrast_denoised'].append(cont_denoised_avg)
+        stats['valid_contrast_merged'].append(cont_merged_avg)
+        stats['valid_contrast_target'].append(cont_target_avg)
+        stats['valid_contrast_diff'].append(cont_diff_avg)
         self.save_model(epoch, stats, epoch == 0)
 
 
@@ -169,6 +173,10 @@ class Noise2Noise(object):
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness (denoised)', stats['valid_sharp_denoised'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness (target)', stats['valid_sharp_target'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness diff (percentage)', stats['valid_sharp_perc'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid contrast (denoised)', stats['valid_contrast_denoised'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid contrast (merged)', stats['valid_contrast_merged'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid contrast (target)', stats['valid_contrast_target'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid contrast difference', stats['valid_contrast_diff'], '')
 
 
     def test(self, test_loader, show):
@@ -243,6 +251,10 @@ class Noise2Noise(object):
         sharp_merged = AvgMeter()
         sharp_denoised = AvgMeter()
         sharp_target = AvgMeter()
+        cont_denoised = AvgMeter()
+        cont_merged = AvgMeter()
+        cont_target = AvgMeter()
+        cont_diff = AvgMeter()
 
         base = None
 
@@ -320,6 +332,16 @@ class Noise2Noise(object):
             sharp_merged.update(merged_sharp)
             sharp_denoised.update(denoised_sharp)
             sharp_target.update(target_sharp)
+            
+            #contrast
+            denoised_contrast = np.std(source_denoised)    
+            merged_contrast = np.std(merged_image)
+            target_contrast = np.std(target)
+            cont_difference = merged_contrast - target_contrast
+            cont_denoised.update(denoised_contrast)
+            cont_merged.update(merged_contrast)
+            cont_target.update(target_contrast)
+            cont_diff.update(cont_difference)
 
         valid_loss = loss_meter.avg
         valid_time = time_elapsed_since(valid_start)[0]
@@ -329,8 +351,13 @@ class Noise2Noise(object):
         sharp_merged_avg = sharp_merged.avg
         sharp_denoised_avg = sharp_denoised.avg
         sharp_target_avg = sharp_target.avg
+        cont_denoised_avg = cont_denoised.avg
+        cont_merged_avg = cont_merged.avg
+        cont_target_avg = cont_target.avg
+        cont_diff_avg = cont_diff.avg
 
-        return valid_loss, valid_time, psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_denoised_avg, sharp_target_avg
+        return valid_loss, valid_time, psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_denoised_avg, sharp_target_avg,\
+        cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_diff_avg
 
 
     def train(self, train_list, train_target_dir, valid_list, valid_target_dir):
@@ -353,6 +380,10 @@ class Noise2Noise(object):
                  'valid_sharp_merged': [],
                  'valid_sharp_denoised': [],
                  'valid_sharp_target': [],
+                 'valid_contrast_denoised':[],
+                 'valid_contrast_merged':[],
+                 'valid_contrast_target':[],
+                 'valid_contrast_diff':[],
                  'valid_psnr': []}
 
         # Main training loop
