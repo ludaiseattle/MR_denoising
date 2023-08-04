@@ -47,11 +47,11 @@ def time_elapsed_since(start):
     return string, ms
 
 
-def show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_diff_avg):
+def show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg):
     """Formats validation error stats."""
 
     clear_line()
-    print('Train time: {} | Valid time: {} | Valid loss: {:>1.5f} | Avg PSNR: {:.2f} dB | Avg sharpness diff: {:.2f} | Avg sharp diff (percentage): {:.2f} | Avg sharp merged: {:.2f} |Avg sharp denoised: {:.2f} | Avg sharp target: {:.2f}| Avg contrast denoised: {:.2f}| Avg contrast merged: {:.2f}| Avg contrast target: {:.2f}| Avg contrast difference(merged-target): {:.2f}'.format(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_diff_avg))
+    print('Train time: {} | Valid time: {} | Valid loss: {:>1.5f} | Avg PSNR: {:.2f} dB | Avg sharpness diff: {:.2f} | Avg sharp diff (percentage): {:.2f} | Avg sharp merged: {:.2f} |Avg sharp denoised: {:.2f} | Avg sharp target: {:.2f}| Avg sharp source: {:.2f}| Avg contrast denoised: {:.2f}| Avg contrast merged: {:.2f}| Avg contrast target: {:.2f}| Avg contrast source: {:.2f}| Avg contrast difference: {:.2f}'.format(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg))
 
 
 def show_on_report(batch_idx, num_batches, loss, elapsed):
@@ -110,7 +110,7 @@ def reinhard_tonemap(tensor):
 def psnr(input, target):
     """Computes peak signal-to-noise ratio."""
     
-    return 10 * torch.log10(1 / F.mse_loss(input, target))
+    return 10 * np.log10(255 / np.mean(input - target)**2)
 
 
 def create_montage(img_name, noise_type, save_path, source_t, denoised_t, clean_t, show):

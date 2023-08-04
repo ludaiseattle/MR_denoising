@@ -141,8 +141,8 @@ class Noise2Noise(object):
         # Evaluate model on validation set
         print('\rTesting model on validation set... ', end='')
         epoch_time = time_elapsed_since(epoch_start)[0]
-        valid_loss, valid_time, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_diff_avg = self.eval(epoch, valid_list, valid_target_dir)
-        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_diff_avg)
+        valid_loss, valid_time, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg = self.eval(epoch, valid_list, valid_target_dir)
+        show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg)
 
         # Decrease learning rate if plateau
         self.scheduler.step(valid_loss)
@@ -156,9 +156,11 @@ class Noise2Noise(object):
         stats['valid_sharp_merged'].append(valid_merged)
         stats['valid_sharp_denoised'].append(valid_denoised)
         stats['valid_sharp_target'].append(valid_target)
+        stats['valid_sharp_source'].append(valid_source)
         stats['valid_contrast_denoised'].append(cont_denoised_avg)
         stats['valid_contrast_merged'].append(cont_merged_avg)
         stats['valid_contrast_target'].append(cont_target_avg)
+        stats['valid_contrast_source'].append(cont_source_avg)
         stats['valid_contrast_diff'].append(cont_diff_avg)
         self.save_model(epoch, stats, epoch == 0)
 
@@ -172,10 +174,12 @@ class Noise2Noise(object):
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness (merged)', stats['valid_sharp_merged'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness (denoised)', stats['valid_sharp_denoised'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness (target)', stats['valid_sharp_target'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid sharpness (source)', stats['valid_sharp_source'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid sharpness diff (percentage)', stats['valid_sharp_perc'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid contrast (denoised)', stats['valid_contrast_denoised'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid contrast (merged)', stats['valid_contrast_merged'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid contrast (target)', stats['valid_contrast_target'], '')
+            plot_per_epoch(self.ckpt_dir, 'Valid contrast (source)', stats['valid_contrast_source'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid contrast difference', stats['valid_contrast_diff'], '')
 
 
@@ -251,12 +255,12 @@ class Noise2Noise(object):
         sharp_merged = AvgMeter()
         sharp_denoised = AvgMeter()
         sharp_target = AvgMeter()
+        sharp_source = AvgMeter()
         cont_denoised = AvgMeter()
         cont_merged = AvgMeter()
         cont_target = AvgMeter()
+        cont_source = AvgMeter()
         cont_diff = AvgMeter()
-
-        base = None
 
         for batch_idx, source_file in enumerate(valid_list):
             print("batch_idx:", batch_idx)
@@ -266,18 +270,12 @@ class Noise2Noise(object):
 
             source = Image.open(source_file).convert("L")
             #print("source", source.size)
-            if self.p.add_noise:
-                base = tvF.to_tensor(source)
-                source = np.asarray(source) 
-                #noise = np.random.poisson(source)
-                #noise_img = source + noise
-                #source = 255 * (noise_img / np.amax(noise_img))
-                source = self.add_gaussian_noise(source, 0, 0.5)
-                source = Image.fromarray(source)
                 
             source = tvF.to_tensor(source)
             #print("source", source.shape)
-            target = source
+            target_file = os.path.join(valid_target_dir, file_name)
+            target = Image.open(target_file).convert("L")
+            target = tvF.to_tensor(target)
 
             if self.use_cuda:
                 source = source.cuda()
@@ -295,18 +293,19 @@ class Noise2Noise(object):
                 source_denoised = reinhard_tonemap(source_denoised)
             source_denoised = source_denoised.cpu()
             target = target.cpu()
-            #print("source_denoised, target", len(source_denoised), len(target), target.shape)
-            #psnr_meter.update(psnr(source_denoised[0], target[0]).item())
+            source = source.cpu()
             #psnr
-            if self.p.add_noise:
-                psnr_meter.update(psnr(source_denoised, base).item() - psnr(target, base).item())
-            else:
-                psnr_meter.update(-1)
+            #psnr_meter.update(psnr(source_denoised, target).item() - psnr(source, target).item())
 
             source_denoised = np.array(tvF.to_pil_image(source_denoised))
             target = np.array(tvF.to_pil_image(target))
+            source = np.array(tvF.to_pil_image(source))
+
             #merged
             merged_image = self.merge_images(target, source_denoised, 0.05)
+
+            #psnr
+            psnr_meter.update(psnr(source_denoised, target) - psnr(source, target))
 
             #save image
             tif_path = os.path.join(self.p.ckpt_save_path, "tif")
@@ -317,30 +316,31 @@ class Noise2Noise(object):
             if batch_idx == 0:
                 tiff.imwrite(os.path.join(tif_path, file_prefix + "_epoch" + str(epoch) + "_denoised.tif"), source_denoised)
                 tiff.imwrite(os.path.join(tif_path, file_prefix + "_epoch" + str(epoch) + "_merged.tif"), merged_image)
-            if self.p.add_noise and batch_idx == 0:
-                source_np = np.array(tvF.to_pil_image(source))
-                tiff.imwrite(os.path.join(tif_path, file_prefix + "_epoch" + str(epoch) + "_noise.tif"), source_np)
 
             #update sharpness
             denoised_sharp = self.compute_sharpness(source_denoised) 
             merged_sharp = self.compute_sharpness(merged_image)
             target_sharp = self.compute_sharpness(target)
-            sharp_diff = merged_sharp - target_sharp
+            source_sharp = self.compute_sharpness(source)
+            sharp_diff = (merged_sharp - target_sharp) - (source_sharp - target_sharp)
             sharp_percentage = sharp_diff / target_sharp
             sharp_meter.update(sharp_diff)
             sharp_perc.update(sharp_percentage)
             sharp_merged.update(merged_sharp)
             sharp_denoised.update(denoised_sharp)
             sharp_target.update(target_sharp)
+            sharp_source.update(source_sharp)
             
             #contrast
             denoised_contrast = np.std(source_denoised)    
             merged_contrast = np.std(merged_image)
             target_contrast = np.std(target)
-            cont_difference = merged_contrast - target_contrast
+            source_contrast = np.std(source)
+            cont_difference = (merged_contrast - target_contrast) - (source_contrast - target_contrast)
             cont_denoised.update(denoised_contrast)
             cont_merged.update(merged_contrast)
             cont_target.update(target_contrast)
+            cont_source.update(source_contrast)
             cont_diff.update(cont_difference)
 
         valid_loss = loss_meter.avg
@@ -351,13 +351,15 @@ class Noise2Noise(object):
         sharp_merged_avg = sharp_merged.avg
         sharp_denoised_avg = sharp_denoised.avg
         sharp_target_avg = sharp_target.avg
+        sharp_source_avg = sharp_source.avg
         cont_denoised_avg = cont_denoised.avg
         cont_merged_avg = cont_merged.avg
         cont_target_avg = cont_target.avg
+        cont_source_avg = cont_source.avg
         cont_diff_avg = cont_diff.avg
 
         return valid_loss, valid_time, psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_denoised_avg, sharp_target_avg,\
-        cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_diff_avg
+        sharp_source_avg, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg
 
 
     def train(self, train_list, train_target_dir, valid_list, valid_target_dir):
@@ -380,9 +382,11 @@ class Noise2Noise(object):
                  'valid_sharp_merged': [],
                  'valid_sharp_denoised': [],
                  'valid_sharp_target': [],
+                 'valid_sharp_source': [],
                  'valid_contrast_denoised':[],
                  'valid_contrast_merged':[],
                  'valid_contrast_target':[],
+                 'valid_contrast_source':[],
                  'valid_contrast_diff':[],
                  'valid_psnr': []}
 
