@@ -51,8 +51,9 @@ def get_files_in_folder(folder_path):
     file_list = []
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            file_path = os.path.join(root, file)
-            file_list.append(file_path)
+            if file.lower().endswith('.tif'):
+                file_path = os.path.join(root, file)
+                file_list.append(file_path)
     return file_list
 
 if __name__ == '__main__':

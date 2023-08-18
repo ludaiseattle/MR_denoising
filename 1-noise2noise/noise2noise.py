@@ -30,7 +30,7 @@ class Noise2Noise(object):
     def _compile(self):
         """Compiles model (architecture, loss function, optimizers, etc.)."""
 
-        print('Noise2Noise: Learning Image Restoration without Clean Data (Lethinen et al., 2018)')
+        #print('Noise2Noise: Learning Image Restoration without Clean Data (Lethinen et al., 2018)')
 
         # Model (3x3=9 channels for Monte Carlo since it uses 3 HDR buffers)
         if self.p.noise_type == 'mc':
@@ -302,7 +302,7 @@ class Noise2Noise(object):
             source = np.array(tvF.to_pil_image(source))
 
             #merged
-            merged_image = self.merge_images(target, source_denoised, 0.05)
+            merged_image = self.merge_images(target, source_denoised, 0.3)
 
             #psnr
             psnr_meter.update(psnr(source_denoised, target) - psnr(source, target))
@@ -369,7 +369,7 @@ class Noise2Noise(object):
 
         self._print_params()
         num_batches = len(train_list)
-        print(num_batches, self.p.report_interval)
+        #print(num_batches, self.p.report_interval)
         assert num_batches % self.p.report_interval == 0, 'Report interval must divide total number of batches, {num_batches}, {self.p.report_interval}'
 
         # Dictionaries of tracked stats
@@ -405,7 +405,7 @@ class Noise2Noise(object):
             #for batch_idx, (source, target) in enumerate(train_loader):
             #/home/alyld7/data/1-whole_out/samp1/new_MidbrainvolumePamirNott090-9_org_samp1.tif
             for batch_idx, source_file in enumerate(train_list):
-                print(source_file)
+                #print(source_file)
                 target_file = os.path.basename(source_file)
                 target_file = target_file.split("1.tif")[0]
                 target_file = target_file + "2.tif"
@@ -417,7 +417,7 @@ class Noise2Noise(object):
                 source = Image.open(source_file).convert("L")
                 source = tvF.to_tensor(source)
                 batch_start = datetime.now()
-                progress_bar(batch_idx, num_batches, self.p.report_interval, loss_meter.val)
+                #progress_bar(batch_idx, num_batches, self.p.report_interval, loss_meter.val)
 
                 if self.use_cuda:
                     source = source.cuda()

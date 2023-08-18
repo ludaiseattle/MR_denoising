@@ -1,0 +1,10 @@
+/home/alyld7/1-MR_denoising/utils.py:8: ComplexWarning: Casting complex values to real discards the imaginary part
+  ret = normalized_amplitude_scaled.astype(np.uint8)
+/home/alyld7/1-MR_denoising/utils.py:5: RuntimeWarning: divide by zero encountered in log10
+  log_amplitude = 20 * np.log10(1 + amplitude_spectrum)
+/home/alyld7/1-MR_denoising/utils.py:5: RuntimeWarning: invalid value encountered in multiply
+  log_amplitude = 20 * np.log10(1 + amplitude_spectrum)
+/home/alyld7/1-MR_denoising/utils.py:6: RuntimeWarning: invalid value encountered in subtract
+  normalized_amplitude = (log_amplitude - np.min(log_amplitude)) / (np.max(log_amplitude) - np.min(log_amplitude))
+/home/alyld7/1-MR_denoising/utils.py:6: RuntimeWarning: invalid value encountered in cdouble_scalars
+  normalized_amplitude = (log_amplitude - np.min(log_amplitude)) / (np.max(log_amplitude) - np.min(log_amplitude))
