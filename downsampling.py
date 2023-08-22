@@ -34,12 +34,16 @@ def star_sampling(image, factor, samp1_num, angle_start1, samp2_num, angle_start
         return points + [(2*x0-x, 2*y0-y) for x, y in points[-2::-1]]
 
     for angle in range(0, total_num * factor, angle_step):
-        if angle_start1 <= angle <= total_num * factor and (angle - angle_start1) % angle_interval1 == 0:
+        if angle == 450:
+            cond1 = True
+        elif angle_start1 <= angle <= total_num * factor and (angle - angle_start1) % angle_interval1 == 0:
             cond1 = True
         else:
             cond1 = False
 
-        if angle_start2 <= angle <= total_num * factor and (angle - angle_start2) % angle_interval2 == 0:
+        if angle == 450:
+            cond2 = True
+        elif angle_start2 <= angle <= total_num * factor and (angle - angle_start2) % angle_interval2 == 0:
             cond2 = True
         else:
             cond2 = False
