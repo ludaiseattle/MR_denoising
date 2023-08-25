@@ -9,7 +9,8 @@ def star_sampling(image, factor, samp1_num, angle_start1, samp2_num, angle_start
     image = torch.tensor(image, dtype=torch.complex128)
     image = image.cuda()
     center = (image.shape[1] // 2, image.shape[0] // 2)
-    distance = np.sqrt(center[0] ** 2 + center[1] ** 2)
+    #distance = np.sqrt(center[0] ** 2 + center[1] ** 2)
+    distance = center[0]
 
     height, width = image.shape[:2]
     sampling_points = []
@@ -33,17 +34,37 @@ def star_sampling(image, factor, samp1_num, angle_start1, samp2_num, angle_start
             points.append((x, y))
         return points + [(2*x0-x, 2*y0-y) for x, y in points[-2::-1]]
 
+    #hit1 = random.randint(0, angle_interval1)
+    #hit2 = random.randint(0, angle_interval2)
+    start1 = 0
+    end1 = angle_interval1
+    nums1 = []
+    for i in range(0, samp1_num): 
+        hit1 = random.randint(start1, end1)
+        nums1.append(hit1)
+        start1 = start1 + angle_interval1
+        end1 = end1 + angle_interval1
+         
+    start2 = 0
+    end2 = angle_interval2
+    nums2 = []
+    for i in range(0, samp2_num): 
+        hit2 = random.randint(start2, end2)
+        nums2.append(hit2)
+        start2 = start2 + angle_interval2
+        end2 = end2 + angle_interval2
+
     for angle in range(0, total_num * factor, angle_step):
         if angle == 450:
             cond1 = True
-        elif angle_start1 <= angle <= total_num * factor and (angle - angle_start1) % angle_interval1 == 0:
+        elif angle in nums1:
             cond1 = True
         else:
             cond1 = False
 
         if angle == 450:
             cond2 = True
-        elif angle_start2 <= angle <= total_num * factor and (angle - angle_start2) % angle_interval2 == 0:
+        elif angle in nums2:
             cond2 = True
         else:
             cond2 = False

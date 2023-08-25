@@ -24,11 +24,11 @@ def get_outname(file, output_folder, suffix):
     out2 = out_file + "_" + suffix + "2.tif"
     return out1, out2
 
-def whole_flow(input_folder, output_folder):
+def whole_flow(input_folder, output_folder, samp_num):
     file_paths = glob.glob(os.path.join(input_folder, "*.tif"))
     for file in file_paths:
         fft = fftshift(file)
-        samp1, samp2, mask1, mask2 = star_sampling(fft, 1, 450, 0, 450, 2)
+        samp1, samp2, mask1, mask2 = star_sampling(fft, 1, samp_num, 0, samp_num, 2)
         #samp1, samp3, samp2, samp4 = horiz_samp_four(fft, 0.1)
         #samp1, samp2 = spiral_sampling(fft)
         
@@ -48,7 +48,8 @@ def main(parser, args):
     if flow_num == "whole":
         input_folder = args.input
         output_folder = args.output
-        whole_flow(input_folder, output_folder)
+        samp_num = args.samp_num
+        whole_flow(input_folder, output_folder, samp_num)
     else:
         print("Invalid flow number.")
         parser.print_usage()
@@ -58,6 +59,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--flow", type=str, help="Flow steps(str): 1. whole")
     parser.add_argument("-i", "--input", default="", type=str, help="Input folder")
     parser.add_argument("-o", "--output", default="", type=str, help="Output folder")
+    parser.add_argument("-n", "--samp_num", default="", type=int, help="sample number")
     args = parser.parse_args()
 
 

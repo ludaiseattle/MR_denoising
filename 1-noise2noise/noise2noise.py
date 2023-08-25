@@ -182,8 +182,186 @@ class Noise2Noise(object):
             plot_per_epoch(self.ckpt_dir, 'Valid contrast (source)', stats['valid_contrast_source'], '')
             plot_per_epoch(self.ckpt_dir, 'Valid contrast difference', stats['valid_contrast_diff'], '')
 
+    def test_eval(self, results, epoch, valid_list, valid_target_dir):
+        """Evaluates denoiser on validation set."""
 
-    def test(self, test_loader, show):
+        self.model.train(False)
+
+        valid_start = datetime.now()
+        psnr_meter = AvgMeter()
+        avg_psnr_meter = AvgMeter()
+        sharp_meter = AvgMeter()
+        sharp_perc = AvgMeter()
+        sharp_merged = AvgMeter()
+        sharp_denoised = AvgMeter()
+        sharp_target = AvgMeter()
+        sharp_source = AvgMeter()
+        cont_denoised = AvgMeter()
+        cont_merged = AvgMeter()
+        cont_target = AvgMeter()
+        cont_source = AvgMeter()
+        cont_diff = AvgMeter()
+
+        for batch_idx, source_file in enumerate(valid_list):
+            print("batch_idx:", batch_idx)
+            #print(source_file)
+            file_name = os.path.basename(source_file)
+            file_prefix = file_name.split(".tif")[0]
+
+            source = Image.open(source_file).convert("L")
+            #print("source", source.size)
+                
+            source = tvF.to_tensor(source)
+            #print("source", source.shape)
+            target_file = os.path.join(valid_target_dir, file_name)
+            target = Image.open(target_file).convert("L")
+            target = tvF.to_tensor(target)
+
+            if self.use_cuda:
+                source = source.cuda()
+                target = target.cuda()
+
+            # Denoise
+            source_denoised = self.model(source)
+
+
+            source_denoised = source_denoised.cpu()
+            target = target.cpu()
+            source = source.cpu()
+            #psnr
+            #psnr_meter.update(psnr(source_denoised, target).item() - psnr(source, target).item())
+
+            source_denoised = np.array(tvF.to_pil_image(source_denoised))
+            target = np.array(tvF.to_pil_image(target))
+            source = np.array(tvF.to_pil_image(source))
+
+            #merged
+            merged_image = self.merge_images(target, source_denoised, 0.3)
+            if file_name not in results: 
+                results[file_name] = [merged_image]
+            else:
+                results[file_name].append(merged_image)
+            avg_image = self.average_results(results[file_name])
+
+            #psnr
+            psnr_meter.update(psnr(source_denoised, target) - psnr(source, target))
+            avg_psnr_meter.update(psnr(avg_image, target) - psnr(source, target))
+
+            #save image
+            tif_path = os.path.join(self.p.ckpt_save_path, "tif")
+            if not os.path.isdir(self.p.ckpt_save_path):
+                os.mkdir(self.p.ckpt_save_path)
+            if not os.path.isdir(tif_path):
+                os.mkdir(tif_path)
+            if batch_idx == 0:
+                tiff.imwrite(os.path.join(tif_path, file_prefix + "_epoch" + str(epoch) + "_denoised.tif"), source_denoised)
+                tiff.imwrite(os.path.join(tif_path, file_prefix + "_epoch" + str(epoch) + "_merged.tif"), merged_image)
+                tiff.imwrite(os.path.join(tif_path, file_prefix + "_epoch" + str(epoch) + "_avg_img.tif"), avg_image)
+
+            #update sharpness
+            denoised_sharp = self.compute_sharpness(source_denoised) 
+            merged_sharp = self.compute_sharpness(merged_image)
+            target_sharp = self.compute_sharpness(target)
+            source_sharp = self.compute_sharpness(source)
+            sharp_diff = (merged_sharp - target_sharp) - (source_sharp - target_sharp)
+            sharp_percentage = sharp_diff / target_sharp
+            sharp_meter.update(sharp_diff)
+            sharp_perc.update(sharp_percentage)
+            sharp_merged.update(merged_sharp)
+            sharp_denoised.update(denoised_sharp)
+            sharp_target.update(target_sharp)
+            sharp_source.update(source_sharp)
+            
+            #contrast
+            denoised_contrast = np.std(source_denoised)    
+            merged_contrast = np.std(merged_image)
+            target_contrast = np.std(target)
+            source_contrast = np.std(source)
+            cont_difference = (merged_contrast - target_contrast) - (source_contrast - target_contrast)
+            cont_denoised.update(denoised_contrast)
+            cont_merged.update(merged_contrast)
+            cont_target.update(target_contrast)
+            cont_source.update(source_contrast)
+            cont_diff.update(cont_difference)
+
+        valid_time = time_elapsed_since(valid_start)[0]
+        psnr_avg = psnr_meter.avg
+        avg_psnr_avg = avg_psnr_meter.avg
+        sharp_avg = sharp_meter.avg
+        sharp_perc_avg = sharp_perc.avg
+        sharp_merged_avg = sharp_merged.avg
+        sharp_denoised_avg = sharp_denoised.avg
+        sharp_target_avg = sharp_target.avg
+        sharp_source_avg = sharp_source.avg
+        cont_denoised_avg = cont_denoised.avg
+        cont_merged_avg = cont_merged.avg
+        cont_target_avg = cont_target.avg
+        cont_source_avg = cont_source.avg
+        cont_diff_avg = cont_diff.avg
+
+        return valid_time, psnr_avg, avg_psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_denoised_avg, sharp_target_avg,\
+        sharp_source_avg, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg
+
+    def test(self, test_list, test_target_dir):
+        """Evaluates denoiser on test set."""
+        self.model.train(False)
+        results = {}
+        stats = {'noise_type': self.p.noise_type,
+                 'noise_param': self.p.noise_param,
+                 'valid_sharpness': [],
+                 'valid_sharp_perc': [],
+                 'valid_sharp_merged': [],
+                 'valid_sharp_denoised': [],
+                 'valid_sharp_target': [],
+                 'valid_sharp_source': [],
+                 'valid_contrast_denoised':[],
+                 'valid_contrast_merged':[],
+                 'valid_contrast_target':[],
+                 'valid_contrast_source':[],
+                 'valid_contrast_diff':[],
+                 'valid_avg_psnr':[],
+                 'valid_psnr': []}
+
+        for epoch in range(0, self.p.nb_epochs, 1):
+            print('epoch: ', epoch)
+            epoch_start = datetime.now()
+            epoch_time = time_elapsed_since(epoch_start)[0]
+
+            valid_time, valid_psnr, valid_avg_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg = self.test_eval(results, epoch, test_list, test_target_dir)
+
+            test_show_on_epoch_end(epoch_time, valid_time, 0, valid_psnr, valid_avg_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg)
+
+            # Save checkpoint
+            stats['valid_psnr'].append(valid_psnr)
+            stats['valid_avg_psnr'].append(valid_avg_psnr)
+            stats['valid_sharpness'].append(valid_sharp)
+            stats['valid_sharp_perc'].append(valid_perc)
+            stats['valid_sharp_merged'].append(valid_merged)
+            stats['valid_sharp_denoised'].append(valid_denoised)
+            stats['valid_sharp_target'].append(valid_target)
+            stats['valid_sharp_source'].append(valid_source)
+            stats['valid_contrast_denoised'].append(cont_denoised_avg)
+            stats['valid_contrast_merged'].append(cont_merged_avg)
+            stats['valid_contrast_target'].append(cont_target_avg)
+            stats['valid_contrast_source'].append(cont_source_avg)
+            stats['valid_contrast_diff'].append(cont_diff_avg)
+
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid PSNR', stats['valid_psnr'], 'PSNR (dB)')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid AVG PSNR', stats['valid_avg_psnr'], 'PSNR (dB)')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness difference', stats['valid_sharpness'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness (merged)', stats['valid_sharp_merged'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness (denoised)', stats['valid_sharp_denoised'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness (target)', stats['valid_sharp_target'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness (source)', stats['valid_sharp_source'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness diff (percentage)', stats['valid_sharp_perc'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid contrast (denoised)', stats['valid_contrast_denoised'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid contrast (merged)', stats['valid_contrast_merged'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid contrast (target)', stats['valid_contrast_target'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid contrast (source)', stats['valid_contrast_source'], '')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid contrast difference', stats['valid_contrast_diff'], '')
+
+
+    def test1(self, test_list, show):
         """Evaluates denoiser on test set."""
 
         self.model.train(False)
@@ -236,6 +414,21 @@ class Noise2Noise(object):
         merged_image = merged_image.astype(np.uint8)
 
         return merged_image
+
+    def average_results(self, results):
+        num_images = len(results)
+        total_sum = None
+
+        for image in results:
+            if total_sum is None:
+                total_sum = image.astype(np.float64)
+            else:
+                total_sum += image
+        avg = total_sum / num_images
+        avg = np.clip(avg, 0, 255)
+        avg = avg.astype(np.uint8)
+
+        return avg
     
     def add_gaussian_noise(self, image, mean=0, std_dev=10):
         noise = np.random.normal(mean, std_dev, image.shape).astype(np.uint8)
