@@ -190,6 +190,7 @@ class Noise2Noise(object):
         valid_start = datetime.now()
         psnr_meter = AvgMeter()
         avg_psnr_meter = AvgMeter()
+        merged_psnr_meter = AvgMeter()
         sharp_meter = AvgMeter()
         sharp_perc = AvgMeter()
         sharp_merged = AvgMeter()
@@ -207,13 +208,15 @@ class Noise2Noise(object):
             #print(source_file)
             file_name = os.path.basename(source_file)
             file_prefix = file_name.split(".tif")[0]
+            target_name = file_name.split("_org")[0]
+            target_name = target_name + "_org.tif"
 
             source = Image.open(source_file).convert("L")
             #print("source", source.size)
                 
             source = tvF.to_tensor(source)
             #print("source", source.shape)
-            target_file = os.path.join(valid_target_dir, file_name)
+            target_file = os.path.join(valid_target_dir, target_name)
             target = Image.open(target_file).convert("L")
             target = tvF.to_tensor(target)
 
@@ -246,6 +249,8 @@ class Noise2Noise(object):
             #psnr
             psnr_meter.update(psnr(source_denoised, target) - psnr(source, target))
             avg_psnr_meter.update(psnr(avg_image, target) - psnr(source, target))
+            merged_psnr_meter.update(psnr(merged_image, target) - psnr(source, target))
+            #avg_psnr_meter.update(avg_image- target)
 
             #save image
             tif_path = os.path.join(self.p.ckpt_save_path, "tif")
@@ -287,6 +292,7 @@ class Noise2Noise(object):
         valid_time = time_elapsed_since(valid_start)[0]
         psnr_avg = psnr_meter.avg
         avg_psnr_avg = avg_psnr_meter.avg
+        merged_psnr_avg = merged_psnr_meter.avg
         sharp_avg = sharp_meter.avg
         sharp_perc_avg = sharp_perc.avg
         sharp_merged_avg = sharp_merged.avg
@@ -299,7 +305,7 @@ class Noise2Noise(object):
         cont_source_avg = cont_source.avg
         cont_diff_avg = cont_diff.avg
 
-        return valid_time, psnr_avg, avg_psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_denoised_avg, sharp_target_avg,\
+        return valid_time, psnr_avg, avg_psnr_avg, merged_psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_denoised_avg, sharp_target_avg,\
         sharp_source_avg, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg
 
     def test(self, test_list, test_target_dir):
@@ -320,6 +326,7 @@ class Noise2Noise(object):
                  'valid_contrast_source':[],
                  'valid_contrast_diff':[],
                  'valid_avg_psnr':[],
+                 'valid_merged_psnr':[],
                  'valid_psnr': []}
 
         for epoch in range(0, self.p.nb_epochs, 1):
@@ -327,13 +334,14 @@ class Noise2Noise(object):
             epoch_start = datetime.now()
             epoch_time = time_elapsed_since(epoch_start)[0]
 
-            valid_time, valid_psnr, valid_avg_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg = self.test_eval(results, epoch, test_list, test_target_dir)
+            valid_time, valid_psnr, valid_avg_psnr, valid_merged_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg = self.test_eval(results, epoch, test_list, test_target_dir)
 
-            test_show_on_epoch_end(epoch_time, valid_time, 0, valid_psnr, valid_avg_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg)
+            test_show_on_epoch_end(epoch_time, valid_time, 0, valid_psnr, valid_avg_psnr, valid_merged_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg)
 
             # Save checkpoint
             stats['valid_psnr'].append(valid_psnr)
             stats['valid_avg_psnr'].append(valid_avg_psnr)
+            stats['valid_merged_psnr'].append(valid_merged_psnr)
             stats['valid_sharpness'].append(valid_sharp)
             stats['valid_sharp_perc'].append(valid_perc)
             stats['valid_sharp_merged'].append(valid_merged)
@@ -346,8 +354,14 @@ class Noise2Noise(object):
             stats['valid_contrast_source'].append(cont_source_avg)
             stats['valid_contrast_diff'].append(cont_diff_avg)
 
-            plot_per_epoch(self.p.ckpt_save_path, 'Valid PSNR', stats['valid_psnr'], 'PSNR (dB)')
+            # Save stats to JSON
+            fname_dict = '{}/n2n-stats.json'.format(self.p.ckpt_save_path)
+            with open(fname_dict, 'w') as fp:
+                json.dump(stats, fp, indent=2)
+
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid denoised PSNR', stats['valid_psnr'], 'PSNR (dB)')
             plot_per_epoch(self.p.ckpt_save_path, 'Valid AVG PSNR', stats['valid_avg_psnr'], 'PSNR (dB)')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid merged PSNR', stats['valid_merged_psnr'], 'PSNR (dB)')
             plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness difference', stats['valid_sharpness'], '')
             plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness (merged)', stats['valid_sharp_merged'], '')
             plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness (denoised)', stats['valid_sharp_denoised'], '')
@@ -460,13 +474,15 @@ class Noise2Noise(object):
             #print(source_file)
             file_name = os.path.basename(source_file)
             file_prefix = file_name.split(".tif")[0]
+            target_name = file_name.split("_org")[0]
+            target_name = target_name + "_org.tif"
 
             source = Image.open(source_file).convert("L")
             #print("source", source.size)
                 
             source = tvF.to_tensor(source)
             #print("source", source.shape)
-            target_file = os.path.join(valid_target_dir, file_name)
+            target_file = os.path.join(valid_target_dir, target_name)
             target = Image.open(target_file).convert("L")
             target = tvF.to_tensor(target)
 
