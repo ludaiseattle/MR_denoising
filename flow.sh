@@ -90,3 +90,6 @@ nohup python denoising.py -f whole -i ../data/0-Image512/ -o ../data/41-n420 -n 
 #41-450
 nohup python denoising.py -f whole -i ../data/1-test/ -o ../data/41-test_n450 -n 450 > ../data/41-test_n450/output.log 2>&1 &
 nohup python denoising.py -f whole -i ../data/0-Image512/ -o ../data/41-n450 -n 450 > ../data/41-n450/output.log 2>&1 &
+
+#41-18
+nohup python denoising.py -f whole -i ../data/1-test/ -o ../data/41-test_n18 -n 18 > ../data/41-test_n18/output.log 2>&1 &
