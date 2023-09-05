@@ -3,6 +3,7 @@
 
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 import torchvision.transforms.functional as tvF
 
 import os
@@ -116,7 +117,7 @@ def reinhard_tonemap(tensor):
 def psnr(input, target):
     """Computes peak signal-to-noise ratio."""
     
-    return 10 * np.log10(255 / np.mean(input - target)**2)
+    return 10 * np.log10(255**2 / np.mean((input - target) ** 2))
 
 def image_diff(input, target): 
     return input - target
