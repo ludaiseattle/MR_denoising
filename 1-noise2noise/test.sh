@@ -1,5 +1,5 @@
 #test
-python test.py  --data /home/alyld7/data/test_out/valid --test-target-dir /home/alyld7/data/1-test --load-ckpt /home/alyld7/data/41-n180/0_3_dropout_0_9/checkpoint/stats/n2n-epoch75-0.00103.pt --ckpt-save-path /home/alyld7/data/test_out --nb-epochs 5 --cuda
+python test.py  --data /home/alyld7/data/test_out/valid --test-target-dir /home/alyld7/data/1-test --load-ckpt /home/alyld7/data/41-nfusion2/0_3_dropout_0_5/checkpoint/stats/n2n-epoch75-0.00067.pt --ckpt-save-path /home/alyld7/data/test_out --nb-epochs 5 --cuda
 
 #t_n180est
 nohup python test.py  --data /home/alyld7/data/test/samp1 --test-target-dir /home/alyld7/data/1-test --load-ckpt /home/alyld7/data/test/n2n-epoch40-0.00044.pt --ckpt-save-path /home/alyld7/data/test/checkpoint --nb-epochs 3 --cuda > /home/alyld7/data/test/output.log 2>&1 &

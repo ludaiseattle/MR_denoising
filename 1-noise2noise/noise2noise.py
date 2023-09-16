@@ -9,7 +9,7 @@ from PIL import Image
 from torch.optim import Adam, lr_scheduler
 import tifffile as tiff
 
-from unet import UNet2 as UNet
+from unet import UNet3 as UNet
 from utils import *
 
 import os
@@ -185,12 +185,11 @@ class Noise2Noise(object):
     def test_eval(self, results, epoch, valid_list, valid_target_dir):
         """Evaluates denoiser on validation set."""
 
-        self.model.train(False)
-
         valid_start = datetime.now()
         psnr_meter = AvgMeter()
         avg_psnr_meter = AvgMeter()
         merged_psnr_meter = AvgMeter()
+        merged_abs_psnr_meter = AvgMeter()
         sharp_meter = AvgMeter()
         sharp_perc = AvgMeter()
         sharp_merged = AvgMeter()
@@ -204,7 +203,7 @@ class Noise2Noise(object):
         cont_diff = AvgMeter()
 
         for batch_idx, source_file in enumerate(valid_list):
-            print("batch_idx:", batch_idx)
+            print("epoch: ", epoch, "batch_idx: ", batch_idx)
             #print(source_file)
             file_name = os.path.basename(source_file)
             file_prefix = file_name.split(".tif")[0]
@@ -235,21 +234,34 @@ class Noise2Noise(object):
             #psnr_meter.update(psnr(source_denoised, target).item() - psnr(source, target).item())
 
             source_denoised = np.array(tvF.to_pil_image(source_denoised))
+            print("-----------------------------------------------------","epoch:",epoch, "batch:",  batch_idx)
+            #for ele in source_denoised:
+            #    print(ele)
+            print("sta-mean", np.mean(source_denoised))
+            print("sta-var", np.var(source_denoised))
+            print("-----------------------------------------------------")
+
+
+
             target = np.array(tvF.to_pil_image(target))
             source = np.array(tvF.to_pil_image(source))
 
             #merged
             merged_image = self.merge_images(target, source_denoised, 0.3)
             if file_name not in results: 
-                results[file_name] = [merged_image]
+                #results[file_name] = [merged_image]
+                results[file_name] = [source_denoised]
             else:
-                results[file_name].append(merged_image)
+                #results[file_name].append(merged_image)
+                results[file_name].append(source_denoised)
             avg_image = self.average_results(results[file_name])
+            print("avg_len", len(results[file_name]))
 
             #psnr
             psnr_meter.update(psnr(source_denoised, target) - psnr(source, target))
             avg_psnr_meter.update(psnr(avg_image, target) - psnr(source, target))
             merged_psnr_meter.update(psnr(merged_image, target) - psnr(source, target))
+            merged_abs_psnr_meter.update(psnr(merged_image, source))
             #avg_psnr_meter.update(avg_image- target)
 
             #save image
@@ -293,6 +305,7 @@ class Noise2Noise(object):
         psnr_avg = psnr_meter.avg
         avg_psnr_avg = avg_psnr_meter.avg
         merged_psnr_avg = merged_psnr_meter.avg
+        merged_abs_psnr_avg = merged_abs_psnr_meter.avg
         sharp_avg = sharp_meter.avg
         sharp_perc_avg = sharp_perc.avg
         sharp_merged_avg = sharp_merged.avg
@@ -305,12 +318,12 @@ class Noise2Noise(object):
         cont_source_avg = cont_source.avg
         cont_diff_avg = cont_diff.avg
 
-        return valid_time, psnr_avg, avg_psnr_avg, merged_psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_denoised_avg, sharp_target_avg,\
+        return valid_time, psnr_avg, avg_psnr_avg, merged_psnr_avg, merged_abs_psnr_avg, sharp_avg, sharp_perc_avg, sharp_merged_avg, sharp_denoised_avg, sharp_target_avg,\
         sharp_source_avg, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg
 
     def test(self, test_list, test_target_dir):
         """Evaluates denoiser on test set."""
-        self.model.train(False)
+        self.model.train(True)
         results = {}
         stats = {'noise_type': self.p.noise_type,
                  'noise_param': self.p.noise_param,
@@ -327,6 +340,7 @@ class Noise2Noise(object):
                  'valid_contrast_diff':[],
                  'valid_avg_psnr':[],
                  'valid_merged_psnr':[],
+                 'valid_merged_abs_psnr':[],
                  'valid_psnr': []}
 
         for epoch in range(0, self.p.nb_epochs, 1):
@@ -334,14 +348,15 @@ class Noise2Noise(object):
             epoch_start = datetime.now()
             epoch_time = time_elapsed_since(epoch_start)[0]
 
-            valid_time, valid_psnr, valid_avg_psnr, valid_merged_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg = self.test_eval(results, epoch, test_list, test_target_dir)
+            valid_time, valid_psnr, valid_avg_psnr, valid_merged_psnr,valid_merged_abs_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg = self.test_eval(results, epoch, test_list, test_target_dir)
 
-            test_show_on_epoch_end(epoch_time, valid_time, 0, valid_psnr, valid_avg_psnr, valid_merged_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg)
+            test_show_on_epoch_end(epoch_time, valid_time, 0, valid_psnr, valid_avg_psnr, valid_merged_psnr, valid_merged_abs_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg)
 
             # Save checkpoint
             stats['valid_psnr'].append(valid_psnr)
             stats['valid_avg_psnr'].append(valid_avg_psnr)
             stats['valid_merged_psnr'].append(valid_merged_psnr)
+            stats['valid_merged_abs_psnr'].append(valid_merged_abs_psnr)
             stats['valid_sharpness'].append(valid_sharp)
             stats['valid_sharp_perc'].append(valid_perc)
             stats['valid_sharp_merged'].append(valid_merged)
@@ -362,6 +377,7 @@ class Noise2Noise(object):
             plot_per_epoch(self.p.ckpt_save_path, 'Valid denoised PSNR', stats['valid_psnr'], 'PSNR (dB)')
             plot_per_epoch(self.p.ckpt_save_path, 'Valid AVG PSNR', stats['valid_avg_psnr'], 'PSNR (dB)')
             plot_per_epoch(self.p.ckpt_save_path, 'Valid merged PSNR', stats['valid_merged_psnr'], 'PSNR (dB)')
+            plot_per_epoch(self.p.ckpt_save_path, 'Valid merged abs PSNR', stats['valid_merged_abs_psnr'], 'PSNR (dB)')
             plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness difference', stats['valid_sharpness'], '')
             plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness (merged)', stats['valid_sharp_merged'], '')
             plot_per_epoch(self.p.ckpt_save_path, 'Valid sharpness (denoised)', stats['valid_sharp_denoised'], '')
