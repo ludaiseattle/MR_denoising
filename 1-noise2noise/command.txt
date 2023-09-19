@@ -1,5 +1,5 @@
 #test
-python train.py --train-dir /home/alyld7/data/test_out/samp1 --train-target-dir /home/alyld7/data/test_out/samp2 --train-size 1 --valid-dir /home/alyld7/data/test_out/valid --valid-target-dir /home/alyld7/data/1-test --valid-size 2 --ckpt-save-path /home/alyld7/data/test_out/checkpoint --ckpt-overwrite --report-interval 1 --nb-epochs 1 --batch-size 1 --loss l2 --noise-type gaussian --noise-param 50 --crop-size 64 --plot-stats 
+python train.py --train-dir /home/alyld7/data/test_out/samp1 --train-target-dir /home/alyld7/data/test_out/samp2 --train-size 1 --valid-dir /home/alyld7/data/test_out/valid --valid-target-dir /home/alyld7/data/1-test --valid-size 2 --ckpt-save-path /home/alyld7/data/test_out/checkpoint --ckpt-overwrite --report-interval 1 --nb-epochs 5 --batch-size 1 --loss l2 --plot-stats 
 
 #pip uninstall openexr
 #conda install -c conda-forge openexr-python
