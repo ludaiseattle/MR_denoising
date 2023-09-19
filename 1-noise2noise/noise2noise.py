@@ -9,7 +9,7 @@ from PIL import Image
 from torch.optim import Adam, lr_scheduler
 import tifffile as tiff
 
-from unet import UNet3 as UNet
+from unet import UNet10 as UNet
 from utils import *
 
 import os
@@ -258,9 +258,9 @@ class Noise2Noise(object):
             print("avg_len", len(results[file_name]))
 
             #psnr
-            psnr_meter.update(psnr(source_denoised, target) - psnr(source, target))
-            avg_psnr_meter.update(psnr(avg_image, target) - psnr(source, target))
-            merged_psnr_meter.update(psnr(merged_image, target) - psnr(source, target))
+            psnr_meter.update(psnr(source_denoised, target))
+            avg_psnr_meter.update(psnr(avg_image, target))
+            merged_psnr_meter.update(psnr(merged_image, target))
             merged_abs_psnr_meter.update(psnr(merged_image, source))
             #avg_psnr_meter.update(avg_image- target)
 
