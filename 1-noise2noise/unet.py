@@ -130,99 +130,81 @@ class UNet2(nn.Module):
             nn.Conv2d(in_channels, 64, 3, stride=1, padding=1),
             nn.InstanceNorm2d(64, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.Conv2d(64, 64, 3, padding=1),
             nn.InstanceNorm2d(64, affine=True),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5))
+            nn.ReLU(inplace=True))
 
         self._block2 = nn.Sequential(
             nn.MaxPool2d(2),
             nn.Conv2d(64, 128, 3, stride=1, padding=1),
             nn.InstanceNorm2d(128, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.Conv2d(128, 128, 3, padding=1),
             nn.InstanceNorm2d(128, affine=True),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5))
+            nn.ReLU(inplace=True))
 
         self._block3 = nn.Sequential(
             nn.MaxPool2d(2),
             nn.Conv2d(128, 256, 3, stride=1, padding=1),
             nn.InstanceNorm2d(256, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.Conv2d(256, 256, 3, padding=1),
             nn.InstanceNorm2d(256, affine=True),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5))
+            nn.ReLU(inplace=True))
 
         self._block4 = nn.Sequential(
             nn.MaxPool2d(2),
             nn.Conv2d(256, 512, 3, stride=1, padding=1),
             nn.InstanceNorm2d(512, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.Conv2d(512, 512, 3, padding=1),
             nn.InstanceNorm2d(512, affine=True),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5))
+            nn.ReLU(inplace=True))
 
         self._block5 = nn.Sequential(
             nn.MaxPool2d(2),
             nn.Conv2d(512, 512, 3, stride=1, padding=1),
             nn.InstanceNorm2d(512, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.Conv2d(512, 512, 3, padding=1),
             nn.InstanceNorm2d(512, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.ConvTranspose2d(512, 512, 2, stride=2, padding=0, output_padding=0))
 
         self._block6 = nn.Sequential(
             nn.Conv2d(1024, 256, 3, stride=1, padding=1),
             nn.InstanceNorm2d(256, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.Conv2d(256, 256, 3, padding=1),
             nn.InstanceNorm2d(256, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.ConvTranspose2d(256, 256, 2, stride=2, padding=0, output_padding=0))
 
         self._block7 = nn.Sequential(
             nn.Conv2d(512, 128, 3, stride=1, padding=1),
             nn.InstanceNorm2d(128, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.Conv2d(128, 128, 3, padding=1),
             nn.InstanceNorm2d(128, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.ConvTranspose2d(128, 128, 2, stride=2, padding=0, output_padding=0))
 
         self._block8 = nn.Sequential(
             nn.Conv2d(256, 64, 3, stride=1, padding=1),
             nn.InstanceNorm2d(64, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.Conv2d(64, 64, 3, padding=1),
             nn.InstanceNorm2d(64, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.ConvTranspose2d(64, 64, 2, stride=2, padding=0, output_padding=0))
 
         self._block9 = nn.Sequential(
             nn.Conv2d(128, 64, 3, stride=1, padding=1),
             nn.InstanceNorm2d(64, affine=True),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
             nn.Conv2d(64, 64, 3, padding=1),
             nn.InstanceNorm2d(64, affine=True),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5))
+            nn.ReLU(inplace=True))
 
         self._block10 = nn.Sequential(
             nn.Conv2d(64, 32, 1, stride=1, padding=0),
