@@ -9,7 +9,7 @@ from PIL import Image
 from torch.optim import Adam, lr_scheduler
 import tifffile as tiff
 
-from unet import UNet9 as UNet
+from unet import UNet3 as UNet
 from utils import *
 
 import os

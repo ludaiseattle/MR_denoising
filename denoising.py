@@ -28,7 +28,7 @@ def whole_flow(input_folder, output_folder, samp_num):
     file_paths = glob.glob(os.path.join(input_folder, "*.tif"))
     for file in file_paths:
         fft = fftshift(file)
-        samp1, samp2, mask1, mask2 = star_sampling(fft, 1, samp_num, 1, samp_num, 3)
+        samp1, samp2, mask1, mask2 = star_sampling(fft, 1, samp_num, 1, samp_num, 2)
         #samp1, samp3, samp2, samp4 = horiz_samp_four(fft, 0.1)
         #samp1, samp2 = spiral_sampling(fft)
         
