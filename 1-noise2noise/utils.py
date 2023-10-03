@@ -47,11 +47,11 @@ def time_elapsed_since(start):
 
     return string, ms
 
-def test_show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr,valid_avg_psnr, valid_avg_psnr_with_input, valid_merged_psnr,valid_merged_abs_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg):
+def test_show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr,valid_avg_psnr, valid_merged_psnr,valid_merged_abs_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg):
     """Formats validation error stats."""
 
     clear_line()
-    print('Train time: {} | Valid time: {} | loss: {:>1.5f} |denoised PSNR: {:.2f} dB | Avg merging PSNR: {:.2f} dB | Avg merging PSNR with input: {:.2f} dB |merged(single image) PSNR: {:.2f} dB | Avg merged image PSNR (abs): {:.2f} dB |Avg sharpness diff: {:.2f} | Avg sharp diff (percentage): {:.2f} | Avg sharp merged: {:.2f} |Avg sharp denoised: {:.2f} | Avg sharp target: {:.2f}| Avg sharp source: {:.2f}| Avg contrast denoised: {:.2f}| Avg contrast merged: {:.2f}| Avg contrast target: {:.2f}| Avg contrast source: {:.2f}| Avg contrast difference: {:.2f}'.format(epoch_time, valid_time, valid_loss, valid_psnr, valid_avg_psnr, valid_avg_psnr_with_input, valid_merged_psnr,valid_merged_abs_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg))
+    print('Train time: {} | Valid time: {} | loss: {:>1.5f} |denoised PSNR: {:.2f} dB | Avg merging PSNR: {:.2f} dB | merged(single image) PSNR: {:.2f} dB | Avg merged image PSNR (abs): {:.2f} dB |Avg sharpness diff: {:.2f} | Avg sharp diff (percentage): {:.2f} | Avg sharp merged: {:.2f} |Avg sharp denoised: {:.2f} | Avg sharp target: {:.2f}| Avg sharp source: {:.2f}| Avg contrast denoised: {:.2f}| Avg contrast merged: {:.2f}| Avg contrast target: {:.2f}| Avg contrast source: {:.2f}| Avg contrast difference: {:.2f}'.format(epoch_time, valid_time, valid_loss, valid_psnr, valid_avg_psnr, valid_merged_psnr,valid_merged_abs_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg))
 
 
 def show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg):
