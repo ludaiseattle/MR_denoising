@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import torch
+from skimage.metrics import structural_similarity as ski_ssim
 import torch.nn.functional as F
 import torch.nn as nn
 import torchvision.transforms.functional as tvF
@@ -47,11 +48,11 @@ def time_elapsed_since(start):
 
     return string, ms
 
-def test_show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr,valid_avg_psnr, valid_merged_psnr,valid_merged_abs_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg):
+def test_show_on_epoch_end(epoch, valid_time, valid_psnr,valid_avg_psnr, valid_merged_psnr, denoised_nmse, avg_nmse, denoised_ssim, avg_ssim):
     """Formats validation error stats."""
 
     clear_line()
-    print('Train time: {} | Valid time: {} | loss: {:>1.5f} |denoised PSNR: {:.2f} dB | Avg merging PSNR: {:.2f} dB | merged(single image) PSNR: {:.2f} dB | Avg merged image PSNR (abs): {:.2f} dB |Avg sharpness diff: {:.2f} | Avg sharp diff (percentage): {:.2f} | Avg sharp merged: {:.2f} |Avg sharp denoised: {:.2f} | Avg sharp target: {:.2f}| Avg sharp source: {:.2f}| Avg contrast denoised: {:.2f}| Avg contrast merged: {:.2f}| Avg contrast target: {:.2f}| Avg contrast source: {:.2f}| Avg contrast difference: {:.2f}'.format(epoch_time, valid_time, valid_loss, valid_psnr, valid_avg_psnr, valid_merged_psnr,valid_merged_abs_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg))
+    print('Test No.: {} | test time cost: {} |denoised PSNR: {:.2f} dB | Avg merging PSNR: {:.2f} dB | merged(single image) PSNR: {:.2f} dB | denoised nmse: {:.2f} | avg nmse: {:.2f} | denoised ssim: {:.2f} | avg ssim: {:.2f}'.format(epoch, valid_time, valid_psnr, valid_avg_psnr, valid_merged_psnr, denoised_nmse, avg_nmse, denoised_ssim, avg_ssim))
 
 
 def show_on_epoch_end(epoch_time, valid_time, valid_loss, valid_psnr, valid_sharp, valid_perc, valid_merged, valid_denoised, valid_target, valid_source, cont_denoised_avg, cont_merged_avg, cont_target_avg, cont_source_avg, cont_diff_avg):
@@ -76,7 +77,7 @@ def plot_per_epoch(ckpt_dir, title, measurements, y_label):
     ax = fig.add_subplot(111)
     ax.plot(range(1, len(measurements) + 1), measurements)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xlabel('Epoch')
+    ax.set_xlabel('Repitition Count')
     ax.set_ylabel(y_label)
     ax.set_title(title)
     plt.tight_layout()
@@ -118,6 +119,14 @@ def psnr(input, target):
     """Computes peak signal-to-noise ratio."""
     
     return 10 * np.log10(255**2 / np.mean((input - target) ** 2))
+
+def nmse(image1, image2):
+    mse = np.mean((image1 - image2) ** 2)
+    nmse = mse / (np.mean(image1) * np.mean(image2))
+    return nmse
+
+def ssim(image1, image2):
+    return ski_ssim(image1, image2)
 
 def image_diff(input, target): 
     return input - target
